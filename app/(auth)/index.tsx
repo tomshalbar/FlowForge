@@ -3,50 +3,53 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-const app = () => {
+const authIndex = () => {
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#F5B3B6', '#C94B52']}     
-        style={styles.gradient}
-      >
+      <LinearGradient colors={['#F5B3B6', '#C94B52']} style={styles.gradient}>
         <Text style={styles.title}>FlowForge</Text>
         <Text style={styles.aboutText}>
-          Build a schedule that balances work, exercise, and recovery. 
+          Build a schedule that balances work, exercise, and recovery.
         </Text>
-        <Image 
-          source={require('../../assets/images/tempLogo.png')} 
-          style={styles.big_logo} 
+        <Image
+          source={require('../../assets/images/tempLogo.png')}
+          style={styles.big_logo}
         />
 
-        <Pressable 
+        <Pressable
+          onPress={() => {
+            // add function to save user input
+            router.push('/(auth)/signUp');
+          }}
           style={({ pressed }) => [
             styles.getStartedButtonStyle,
             {
-              transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }], 
-            }, 
+              transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+            },
           ]}
-          onPress={() => {
-            // function to save user input  
-            router.push("/(auth)/signUp");
-          }}
         >
           <Text style={styles.activityButtonText}>Get Started</Text>
         </Pressable>
-        
+
         <Text style={styles.smallText}>Already have an account?</Text>
 
-        <Pressable 
+        <Pressable
           onPress={() => {
-            // function to save user input  
-            router.push("/(auth)/signIn");
+            // function to save user input
+            router.push('/(auth)/signIn');
           }}
         >
-          {({ pressed }) => ( 
-            <Text style={[
-              styles.smallText, 
-              {color: pressed ? 'rgba(91, 90, 90, 1)' : 'rgba(182, 179, 179, 1)', marginTop: 10},
-            ] }
+          {({ pressed }) => (
+            <Text
+              style={[
+                styles.smallText,
+                {
+                  color: pressed
+                    ? 'rgba(91, 90, 90, 1)'
+                    : 'rgba(182, 179, 179, 1)',
+                  marginTop: 10,
+                },
+              ]}
             >
               Sign In
             </Text>
@@ -54,17 +57,15 @@ const app = () => {
         </Pressable>
       </LinearGradient>
     </View>
-  )
-}
+  );
+};
 
-export default app
-
+export default authIndex;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, 
+    flex: 1,
     flexDirection: 'column',
-    // marginTop: -40,
   },
   title: {
     color: 'black',
@@ -78,19 +79,15 @@ const styles = StyleSheet.create({
     padding: 20,
     textAlign: 'center',
   },
-  link: {
-    marginHorizontal: 'auto',
-  },
   big_logo: {
     width: 200,
     height: 200,
     borderRadius: 15,
     marginTop: 80,
-    marginBottom: 100
-
+    marginBottom: 100,
   },
   gradient: {
-    flex: 1, 
+    flex: 1,
     padding: 15,
     alignItems: 'center',
     justifyContent: 'center',
@@ -107,7 +104,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
     textAlign: 'center',
-    fontWeight: '700'
+    fontWeight: '700',
   },
   smallText: {
     marginTop: 15,
@@ -115,4 +112,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
   },
-})
+});
