@@ -1,12 +1,25 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-const settings = () => {
+const settingPage = () => {
   return (
-    <View>
-      <Text>settings</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>settingPage template</Text>
     </View>
   );
 };
 
-export default settings;
+export default settingPage;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    flexDirection: 'column',
+  },
+  title: {
+    color: 'black',
+    fontSize: 42,
+    textAlign: 'center',
+    marginTop: 100,
+  },
+});

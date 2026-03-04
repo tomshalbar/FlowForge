@@ -1,12 +1,25 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-const explore = () => {
+const activityPage = () => {
   return (
-    <View>
-      <Text>explore</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Activity page template</Text>
     </View>
   );
 };
 
-export default explore;
+export default activityPage;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    flexDirection: 'column',
+  },
+  title: {
+    color: 'black',
+    fontSize: 42,
+    textAlign: 'center',
+    marginTop: 100,
+  },
+});
