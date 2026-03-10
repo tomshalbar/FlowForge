@@ -59,7 +59,7 @@ const signUp = () => {
           <Pressable
             onPress={() => {
               // function to save user input
-              router.replace('/signInScreen');
+              router.push('/signInScreen');
             }}
           >
             {({ pressed }) => (

@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bottomSection: {
-    paddingBottom: 40,
+    paddingBottom: 80,
     alignItems: 'center',
   },
 });
