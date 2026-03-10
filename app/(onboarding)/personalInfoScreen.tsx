@@ -43,7 +43,7 @@ const presonalInfoScreen = () => {
           <Picker
             selectedValue={wakeTime}
             onValueChange={(itemValue) => setWakeTime(itemValue)}
-            itemStyle={{ color: 'black' }}
+            itemStyle={styles.pickerItem}
           >
             {times.map((t) => (
               <Picker.Item key={t} label={t} value={t} />
@@ -57,7 +57,7 @@ const presonalInfoScreen = () => {
           <Picker
             selectedValue={sleepTime}
             onValueChange={(itemValue) => setSleepTime(itemValue)}
-            itemStyle={{ color: 'black' }}
+            itemStyle={styles.pickerItem}
           >
             {times.map((t) => (
               <Picker.Item key={t} label={t} value={t} />
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
 
   input: {
     width: '90%',
-    height: 55,
+    height: 50,
     backgroundColor: 'white',
     borderRadius: 15,
     paddingHorizontal: 15,
@@ -156,9 +156,17 @@ const styles = StyleSheet.create({
 
   dropdown: {
     width: '90%',
+    height: 150, // important so wheel shows
     backgroundColor: 'white',
     borderRadius: 15,
+    justifyContent: 'center',
     marginBottom: 20,
+    overflow: 'hidden',
+  },
+
+  pickerItem: {
+    color: 'black',
+    fontSize: 20,
   },
 
   nextButtonStyle: {
