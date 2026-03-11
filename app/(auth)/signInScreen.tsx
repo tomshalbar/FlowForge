@@ -1,9 +1,22 @@
+import { signIn } from '@/services/authServices';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
 const signInScreen = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleSignIn = async () => {
+    try {
+      await signIn(email, password);
+      router.replace('/(onboarding)');
+    } catch (error: any) {
+      setErrorMessage('Incorrect Email or Password');
+    }
+  };
   return (
     <AuthScreenLayout
       headerContent={
@@ -19,6 +32,10 @@ const signInScreen = () => {
             placeholder="Email"
             placeholderTextColor="rgba(180, 180, 180, 1)"
             keyboardType="default"
+            onChangeText={(text) => {
+              setEmail(text);
+              if (errorMessage) setErrorMessage('');
+            }}
           />
 
           <TextInput
@@ -26,12 +43,19 @@ const signInScreen = () => {
             placeholder="Password"
             placeholderTextColor="rgba(180, 180, 180, 1)"
             keyboardType="default"
+            onChangeText={(text) => {
+              setPassword(text);
+              if (errorMessage) setErrorMessage('');
+            }}
             secureTextEntry
           />
+          {errorMessage ? (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          ) : null}
 
           <Pressable
             onPress={() => {
-              router.replace('/(onboarding)');
+              handleSignIn();
             }}
             style={({ pressed }) => [
               styles.nextButtonStyle,
@@ -50,7 +74,6 @@ const signInScreen = () => {
 
           <Pressable
             onPress={() => {
-              // function to save user input
               router.push('/signUpScreen');
             }}
           >
@@ -113,6 +136,12 @@ const styles = StyleSheet.create({
     padding: 20,
     textAlign: 'center',
     marginBottom: 60,
+  },
+  errorText: {
+    color: 'red',
+    marginTop: 8,
+    marginBottom: 8,
+    fontSize: 14,
   },
   inputs: {
     alignItems: 'center',
