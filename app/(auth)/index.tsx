@@ -3,7 +3,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
-const authIndex = () => {
+const AuthIndex = () => {
   return (
     <AuthScreenLayout
       headerContent={
@@ -69,7 +69,7 @@ const authIndex = () => {
   );
 };
 
-export default authIndex;
+export default AuthIndex;
 
 const styles = StyleSheet.create({
   title: {
