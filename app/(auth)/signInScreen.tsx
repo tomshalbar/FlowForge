@@ -1,12 +1,21 @@
 import { signIn } from '@/services/authServices';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
 const SignInScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSignIn = async () => {
@@ -28,7 +37,7 @@ const SignInScreen = () => {
       middleContent={
         <>
           <TextInput
-            style={styles.inputs}
+            style={styles.emailInput}
             placeholder="Email"
             placeholderTextColor="rgba(180, 180, 180, 1)"
             keyboardType="email-address"
@@ -38,17 +47,27 @@ const SignInScreen = () => {
             }}
           />
 
-          <TextInput
-            style={styles.inputs}
-            placeholder="Password"
-            placeholderTextColor="rgba(180, 180, 180, 1)"
-            keyboardType="default"
-            onChangeText={(text) => {
-              setPassword(text);
-              if (errorMessage) setErrorMessage('');
-            }}
-            secureTextEntry
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Password"
+              placeholderTextColor="rgba(180, 180, 180, 1)"
+              keyboardType="default"
+              onChangeText={(text) => {
+                setPassword(text);
+                if (errorMessage) setErrorMessage('');
+              }}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Ionicons
+                name={showPassword ? 'eye-off' : 'eye'}
+                size={22}
+                color="gray"
+              />
+            </TouchableOpacity>
+          </View>
+
           {errorMessage ? (
             <Text style={styles.errorText}>{errorMessage}</Text>
           ) : null}
@@ -143,7 +162,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 14,
   },
-  inputs: {
+  emailInput: {
     alignItems: 'center',
     height: 52,
     width: '100%',
@@ -152,6 +171,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 1)',
     borderRadius: 15,
     color: 'rgba(0,0,0,1)',
+    marginBottom: 15,
+  },
+  passwordInput: {
+    flex: 1,
+    color: 'rgba(0,0,0,1)',
+    paddingVertical: 0,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 52,
+    width: '100%',
+    maxWidth: 354,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(255, 255, 255, 1)',
+    borderRadius: 15,
     marginBottom: 15,
   },
   nextButtonStyle: {
