@@ -24,17 +24,17 @@ function mapAuthError(error: any): string {
   }
 }
 
-export async function signIn(email: string, password: string) {
+export async function signUp(email: string, password: string) {
   try {
-    return await signInWithEmailAndPassword(auth, email.trim(), password);
+    return await createUserWithEmailAndPassword(auth, email.trim(), password);
   } catch (error) {
     throw new Error(mapAuthError(error));
   }
 }
 
-export async function signUp(email: string, password: string) {
+export async function signIn(email: string, password: string) {
   try {
-    return await createUserWithEmailAndPassword(auth, email.trim(), password);
+    return await signInWithEmailAndPassword(auth, email.trim(), password);
   } catch (error) {
     throw new Error(mapAuthError(error));
   }
