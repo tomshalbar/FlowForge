@@ -32,7 +32,11 @@ export async function signIn(email: string, password: string) {
   }
 }
 
-export async function signUp(email: string, password: string) {
+export async function signUp(
+  email: string,
+  password: string,
+  confirm_password: string,
+) {
   try {
     return await createUserWithEmailAndPassword(auth, email.trim(), password);
   } catch (error) {

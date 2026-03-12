@@ -1,4 +1,8 @@
-export function validateSignUp(email: string, password: string) {
+export function validateSignUp(
+  email: string,
+  password: string,
+  confirm_password: string,
+) {
   if (!email.trim()) {
     return 'Email is required.';
   }
@@ -15,6 +19,10 @@ export function validateSignUp(email: string, password: string) {
 
   if (password.length < 6) {
     return 'Password must be at least 6 characters.';
+  }
+
+  if (password !== confirm_password) {
+    return 'Your password does not match.';
   }
 
   return null;

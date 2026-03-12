@@ -5,22 +5,23 @@ import { validateSignUp } from '../../logic/signUpValidation';
 import { signUp } from '../../services/authServices';
 import AuthScreenLayout from '../screenTemplate';
 
-const signUpScreen = () => {
+const SignUpScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm_password, setConfirm] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleSignUp = async () => {
     setErrorMessage('');
 
-    const validationError = validateSignUp(email, password);
+    const validationError = validateSignUp(email, password, confirm_password);
     if (validationError) {
       setErrorMessage(validationError);
       return;
     }
 
     try {
-      signUp(email, password);
+      signUp(email, password, confirm_password);
       router.replace('/(onboarding)');
     } catch (error: any) {
       setErrorMessage('Error signing up');
@@ -41,7 +42,7 @@ const signUpScreen = () => {
             style={styles.inputs}
             placeholder="Email"
             placeholderTextColor="rgba(180, 180, 180, 1)"
-            keyboardType="default"
+            keyboardType="email-address"
             onChangeText={(text) => {
               setEmail(text);
               if (errorMessage) setErrorMessage('');
@@ -66,6 +67,10 @@ const signUpScreen = () => {
             placeholderTextColor="rgba(180, 180, 180, 1)"
             keyboardType="default"
             secureTextEntry
+            onChangeText={(text) => {
+              setConfirm(text);
+              if (errorMessage) setErrorMessage('');
+            }}
           />
           {errorMessage ? (
             <Text style={styles.errorText}>{errorMessage}</Text>
@@ -140,7 +145,7 @@ const signUpScreen = () => {
   );
 };
 
-export default signUpScreen;
+export default SignUpScreen;
 
 const styles = StyleSheet.create({
   title: {
