@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { registerBaseUser } from '@/services/dbServices';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -30,7 +31,8 @@ const SignUpScreen = () => {
     }
 
     try {
-      signUp(email, password, confirm_password);
+      const userCredentials = await signUp(email, password);
+      registerBaseUser(email, userCredentials.user.uid);
       router.replace('/(onboarding)');
     } catch (error: any) {
       setErrorMessage('Error signing up');

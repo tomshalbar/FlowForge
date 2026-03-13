@@ -1,5 +1,6 @@
 import { signIn } from '@/services/authServices';
 import { Ionicons } from '@expo/vector-icons';
+import { redirectAfterSignIn } from '@/services/redirectServices';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -20,8 +21,8 @@ const SignInScreen = () => {
 
   const handleSignIn = async () => {
     try {
-      await signIn(email, password);
-      router.replace('/(onboarding)');
+      const userCredentials = await signIn(email, password);
+      redirectAfterSignIn(userCredentials);
     } catch (error: any) {
       setErrorMessage('Incorrect Email or Password');
     }
