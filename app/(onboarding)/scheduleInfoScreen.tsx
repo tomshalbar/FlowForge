@@ -1,85 +1,103 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text } from 'react-native';
+import AuthScreenLayout from '../screenTemplate';
 
-const scheduleInfoScreen = () => {
+const onboardingDoneScreen = () => {
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#F5B3B6', '#C94B52']} style={styles.gradient}>
-        <Text style={styles.title}>schedule Info Screen Template</Text>
-
-        <Pressable
-          onPress={() => {
-            // add function to save user input
-            router.push('/(onboarding)/doneScreen');
-          }}
-          style={({ pressed }) => [
-            styles.nextButtonStyle,
-            {
-              transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
-            },
-          ]}
-        >
-          <Text style={styles.mainButtonText}>Done</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => {
-            // function to save user input
-            router.back();
-          }}
-        >
-          {({ pressed }) => (
-            <Text
-              style={[
-                styles.smallText,
-                {
-                  color: pressed
-                    ? 'rgba(91, 90, 90, 1)'
-                    : 'rgba(182, 179, 179, 1)',
-                  marginTop: 10,
-                },
-              ]}
-            >
-              Back
-            </Text>
-          )}
-        </Pressable>
-      </LinearGradient>
-    </View>
+    <AuthScreenLayout
+      headerContent={
+        <>
+          <Text style={styles.title}>Current class schedule</Text>
+        </>
+      }
+      middleContent={
+        <>
+          <Pressable
+            onPress={() => {
+              // Doesn't do anything yet, should add function
+            }}
+            style={({ pressed }) => [
+              styles.nextButton,
+              {
+                transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+              },
+            ]}
+          >
+            <Image
+              source={require('../../assets/images/temp_upload_icon.png')}
+              style={styles.upload_icon}
+            />
+          </Pressable>
+        </>
+      }
+      bottomContent={
+        <>
+          <Pressable
+            onPress={() => {
+              // add function to save user input
+              router.push('/(onboarding)/doneScreen');
+            }}
+            style={({ pressed }) => [
+              styles.nextButton,
+              {
+                transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+              },
+            ]}
+          >
+            <Text style={styles.buttonText}>Next</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              router.back();
+            }}
+          >
+            {({ pressed }) => (
+              <Text
+                style={[
+                  styles.smallText,
+                  {
+                    color: pressed
+                      ? 'rgba(91, 90, 90, 1)'
+                      : 'rgba(182, 179, 179, 1)',
+                    marginTop: 10,
+                  },
+                ]}
+              >
+                Back
+              </Text>
+            )}
+          </Pressable>
+        </>
+      }
+    />
   );
 };
 
-export default scheduleInfoScreen;
+export default onboardingDoneScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: 'column',
-  },
   title: {
     color: 'black',
-    fontSize: 35,
+    fontSize: 40,
     textAlign: 'center',
     fontWeight: '600',
-    marginBottom: 50,
   },
-  gradient: {
-    flex: 1,
-    padding: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 5,
+  upload_icon: {
+    width: 200,
+    height: 200,
+    borderRadius: 15,
+    marginTop: 80,
+    marginBottom: 100,
   },
-  nextButtonStyle: {
+  nextButton: {
     width: 200,
     height: 60,
     borderRadius: 15,
     backgroundColor: 'rgba(163,51,58,1)',
     justifyContent: 'center',
   },
-  mainButtonText: {
+  buttonText: {
     color: 'white',
     fontSize: 20,
     textAlign: 'center',
@@ -87,7 +105,6 @@ const styles = StyleSheet.create({
   },
   smallText: {
     marginTop: 15,
-    color: 'white',
     fontSize: 18,
     textAlign: 'center',
   },
