@@ -1,9 +1,19 @@
+import { auth } from '@/config/firebase';
+import { setDoneOnboarding } from '@/services/dbServices';
 import { router } from 'expo-router';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
 const onboardingDoneScreen = () => {
+  const handleDone = () => {
+    const user = auth.currentUser;
+    if (user) {
+      setDoneOnboarding(user.uid);
+      router.replace('/(tabs)');
+    }
+  };
+
   return (
     <AuthScreenLayout
       headerContent={
@@ -23,10 +33,7 @@ const onboardingDoneScreen = () => {
       bottomContent={
         <>
           <Pressable
-            onPress={() => {
-              // add function to save user input
-              router.replace('/(tabs)');
-            }}
+            onPress={handleDone}
             style={({ pressed }) => [
               styles.nextButton,
               {

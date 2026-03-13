@@ -1,3 +1,5 @@
+import { auth } from '@/config/firebase';
+import { updateUserPreferences } from '@/services/dbServices';
 import Slider from '@react-native-community/slider';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -13,8 +15,16 @@ const preferencesScreen = () => {
 
   const handleNext = () => {
     if (total !== 100) {
-      Alert.alert('Total must equal 100%', 'Please adjust the sliders so they add up to 100%.');
+      Alert.alert(
+        'Total must equal 100%',
+        'Please adjust the sliders so they add up to 100%.',
+      );
       return;
+    }
+    const user = auth.currentUser;
+    if (user) {
+      updateUserPreferences(study, exercise, relax, user.uid);
+      router.push('/(onboarding)/preferencesScreen');
     }
 
     router.push('/(onboarding)/scheduleInfoScreen');
@@ -30,7 +40,6 @@ const preferencesScreen = () => {
           </Text>
         </>
       }
-
       middleContent={
         <>
           {/* Study */}
@@ -88,7 +97,6 @@ const preferencesScreen = () => {
           </View>
         </>
       }
-
       bottomContent={
         <>
           <Pressable
