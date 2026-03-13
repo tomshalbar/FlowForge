@@ -3,16 +3,64 @@ import { updateUserPreferences } from '@/services/dbServices';
 import Slider from '@react-native-community/slider';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
+type SliderKey = 'study' | 'exercise' | 'relax';
+
+type SliderValues = {
+  study: number;
+  exercise: number;
+  relax: number;
+};
+
+const MIN = 10;
+const MAX = 80;
+const TOTAL = 100;
+
 const preferencesScreen = () => {
-  const [study, setStudy] = useState(60);
-  const [exercise, setExercise] = useState(30);
-  const [relax, setRelax] = useState(10);
+  const [values, setValues] = useState<SliderValues>({
+    study: 40,
+    exercise: 30,
+    relax: 30,
+  });
 
-  const total = study + exercise + relax;
+  const priorityMap: Record<SliderKey, SliderKey[]> = {
+    study: ['exercise', 'relax'], // 1 takes/gives 2 then 3
+    exercise: ['relax', 'study'], // 2 takes/gives 3 then 1
+    relax: ['study', 'exercise'], // 3 takes/gives 1 then 2
+  };
 
+  const updateSlider = (key: SliderKey, requestedValue: number) => {
+    setValues((prev) => {
+      const next = { ...prev };
+      const current = prev[key];
+
+      // Clamp requested slider itself
+      const target = Math.max(MIN, Math.min(MAX, Math.round(requestedValue)));
+      const delta = target - current;
+
+      const [first, second] = priorityMap[key];
+
+      if (delta > 0) {
+        // Increasing this slider: take from others in priority order
+        let remaining = delta;
+
+        const takeFrom = (otherKey: SliderKey) => {
+          const available = next[otherKey] - MIN;
+          const taken = Math.min(available, remaining);
+          next[otherKey] -= taken;
+          remaining -= taken;
+        };
+
+        takeFrom(first);
+        takeFrom(second);
+
+        // Whatever could actually be taken is what this slider gains
+        next[key] = current + (delta - remaining);
+      } else if (delta < 0) {
+        // Decreasing this slider: give to others in priority order
+        let remaining = -delta;
   const handleNext = () => {
     if (total !== 100) {
       Alert.alert(
@@ -27,6 +75,31 @@ const preferencesScreen = () => {
       router.push('/(onboarding)/preferencesScreen');
     }
 
+        const giveTo = (otherKey: SliderKey) => {
+          const space = MAX - next[otherKey];
+          const given = Math.min(space, remaining);
+          next[otherKey] += given;
+          remaining -= given;
+        };
+
+        giveTo(first);
+        giveTo(second);
+
+        // Whatever could actually be given away is what this slider loses
+        next[key] = current - (-delta - remaining);
+      }
+
+      // Safety: force exact total of 100
+      const sum = next.study + next.exercise + next.relax;
+      if (sum !== TOTAL) {
+        next[key] += TOTAL - sum;
+      }
+
+      return next;
+    });
+  };
+
+  const handleNext = () => {
     router.push('/(onboarding)/scheduleInfoScreen');
   };
 
@@ -47,17 +120,15 @@ const preferencesScreen = () => {
           <View style={styles.sliderRow}>
             <Slider
               style={styles.slider}
-              minimumValue={0}
-              maximumValue={100}
-              step={1}
-              value={study}
+              minimumValue={MIN}
+              maximumValue={MAX}
+              step={5}
+              value={values.study}
               minimumTrackTintColor="red"
               maximumTrackTintColor="#ddd"
-              onValueChange={(val) => {
-                if (val + exercise + relax <= 100) setStudy(val);
-              }}
+              onValueChange={(val) => updateSlider('study', val)}
             />
-            <Text style={styles.percent}>{study}%</Text>
+            <Text style={styles.percent}>{values.study}%</Text>
           </View>
 
           {/* Exercise */}
@@ -65,17 +136,15 @@ const preferencesScreen = () => {
           <View style={styles.sliderRow}>
             <Slider
               style={styles.slider}
-              minimumValue={0}
-              maximumValue={100}
-              step={1}
-              value={exercise}
+              minimumValue={MIN}
+              maximumValue={MAX}
+              step={5}
+              value={values.exercise}
               minimumTrackTintColor="darkred"
               maximumTrackTintColor="#ddd"
-              onValueChange={(val) => {
-                if (study + val + relax <= 100) setExercise(val);
-              }}
+              onValueChange={(val) => updateSlider('exercise', val)}
             />
-            <Text style={styles.percent}>{exercise}%</Text>
+            <Text style={styles.percent}>{values.exercise}%</Text>
           </View>
 
           {/* Relax */}
@@ -83,17 +152,15 @@ const preferencesScreen = () => {
           <View style={styles.sliderRow}>
             <Slider
               style={styles.slider}
-              minimumValue={0}
-              maximumValue={100}
-              step={1}
-              value={relax}
+              minimumValue={MIN}
+              maximumValue={MAX}
+              step={5}
+              value={values.relax}
               minimumTrackTintColor="hotpink"
               maximumTrackTintColor="#ddd"
-              onValueChange={(val) => {
-                if (study + exercise + val <= 100) setRelax(val);
-              }}
+              onValueChange={(val) => updateSlider('relax', val)}
             />
-            <Text style={styles.percent}>{relax}%</Text>
+            <Text style={styles.percent}>{values.relax}%</Text>
           </View>
         </>
       }
