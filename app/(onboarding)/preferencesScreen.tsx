@@ -61,20 +61,6 @@ const preferencesScreen = () => {
       } else if (delta < 0) {
         // Decreasing this slider: give to others in priority order
         let remaining = -delta;
-  const handleNext = () => {
-    if (total !== 100) {
-      Alert.alert(
-        'Total must equal 100%',
-        'Please adjust the sliders so they add up to 100%.',
-      );
-      return;
-    }
-    const user = auth.currentUser;
-    if (user) {
-      updateUserPreferences(study, exercise, relax, user.uid);
-      router.push('/(onboarding)/preferencesScreen');
-    }
-
         const giveTo = (otherKey: SliderKey) => {
           const space = MAX - next[otherKey];
           const given = Math.min(space, remaining);
@@ -100,7 +86,16 @@ const preferencesScreen = () => {
   };
 
   const handleNext = () => {
-    router.push('/(onboarding)/scheduleInfoScreen');
+    const user = auth.currentUser;
+    if (user) {
+      updateUserPreferences(
+        values.study,
+        values.exercise,
+        values.relax,
+        user.uid,
+      );
+      router.push('/(onboarding)/scheduleInfoScreen');
+    }
   };
 
   return (

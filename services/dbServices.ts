@@ -79,7 +79,7 @@ export async function updateUserPersonalInfo(
   };
   await setDoc(docRef, data, { merge: true })
     .then(() => {
-      console.log('Document successfully written or updated!');
+      console.log('presonal info successfully written or updated!');
     })
     .catch((error) => {
       console.error('Error writing or updating document: ', error);
@@ -100,7 +100,7 @@ export async function updateUserPreferences(
   };
   await setDoc(docRef, data, { merge: true })
     .then(() => {
-      console.log('Document successfully written or updated!');
+      console.log('user preferences successfully written or updated!');
     })
     .catch((error) => {
       console.error('Error writing or updating document: ', error);
@@ -114,7 +114,7 @@ export async function setDoneOnboarding(userId: string) {
   };
   await setDoc(docRef, data, { merge: true })
     .then(() => {
-      console.log('Document successfully written or updated!');
+      console.log('onboarding status successfully written or updated!');
     })
     .catch((error) => {
       console.error('Error writing or updating document: ', error);

@@ -183,7 +183,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 20,
     textAlign: 'center',
-    color: '#2b2b2b',
     marginBottom: 30,
   },
   errorText: {
