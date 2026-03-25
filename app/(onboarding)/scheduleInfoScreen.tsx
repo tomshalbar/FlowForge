@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
-const onboardingDoneScreen = () => {
+const ScheduleInfoScreen = () => {
   const [schedule, setSchedule] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -20,7 +20,16 @@ const onboardingDoneScreen = () => {
       if (result.assets[0].base64) {
         const base64Data = result.assets[0].base64;
         setSchedule(base64Data);
-        console.log('image uploaded succesfully');
+        //   const model_result = await aiModel.generateContent([
+        //     'what do you see in this image?',
+        //     base64Data,
+        //   ]);
+        // console.log('got model response');
+        // const response = model_result.response;
+        // const text = response.text();
+        // console.log(text);
+        // setSchedule(text);
+        console.log('scheudle uploaded succesfully');
       }
     }
   };
@@ -108,7 +117,7 @@ const onboardingDoneScreen = () => {
   );
 };
 
-export default onboardingDoneScreen;
+export default ScheduleInfoScreen;
 
 const styles = StyleSheet.create({
   title: {

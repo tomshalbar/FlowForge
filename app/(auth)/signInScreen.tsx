@@ -1,6 +1,6 @@
 import { signIn } from '@/services/authServices';
-import { Ionicons } from '@expo/vector-icons';
 import { redirectAfterSignIn } from '@/services/redirectServices';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -23,7 +23,7 @@ const SignInScreen = () => {
     try {
       const userCredentials = await signIn(email, password);
       redirectAfterSignIn(userCredentials);
-    } catch (error: any) {
+    } catch (error) {
       setErrorMessage('Incorrect Email or Password');
     }
   };
@@ -116,7 +116,7 @@ const SignInScreen = () => {
 
           <Pressable
             onPress={() => {
-              router.back();
+              router.navigate('/(auth)');
             }}
           >
             {({ pressed }) => (

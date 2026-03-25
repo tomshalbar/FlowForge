@@ -1,5 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
 import { registerBaseUser } from '@/services/dbServices';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -31,7 +31,7 @@ const SignUpScreen = () => {
     }
 
     try {
-      const userCredentials = await signUp(email, password);
+      const userCredentials = await signUp(email, password, confirm_password);
       registerBaseUser(email, userCredentials.user.uid);
       router.replace('/(onboarding)');
     } catch (error: any) {
@@ -127,7 +127,6 @@ const SignUpScreen = () => {
 
           <Pressable
             onPress={() => {
-              // function to save user input
               router.push('/signInScreen');
             }}
           >
@@ -150,7 +149,7 @@ const SignUpScreen = () => {
 
           <Pressable
             onPress={() => {
-              router.back();
+              router.navigate('/(auth)');
             }}
           >
             {({ pressed }) => (

@@ -18,7 +18,7 @@ const MIN = 10;
 const MAX = 80;
 const TOTAL = 100;
 
-const preferencesScreen = () => {
+const PreferencesScreen = () => {
   const [values, setValues] = useState<SliderValues>({
     study: 40,
     exercise: 30,
@@ -200,7 +200,7 @@ const preferencesScreen = () => {
   );
 };
 
-export default preferencesScreen;
+export default PreferencesScreen;
 
 const styles = StyleSheet.create({
   title: {

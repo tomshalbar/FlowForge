@@ -5,7 +5,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
-const onboardingDoneScreen = () => {
+const OnboardingDoneScreen = () => {
   const handleDone = () => {
     const user = auth.currentUser;
     if (user) {
@@ -70,7 +70,7 @@ const onboardingDoneScreen = () => {
   );
 };
 
-export default onboardingDoneScreen;
+export default OnboardingDoneScreen;
 
 const styles = StyleSheet.create({
   title: {
