@@ -1,5 +1,7 @@
 import { auth } from '@/config/firebase';
+import { analyzeImage } from '@/services/aiServices';
 import { updateUserSchedule } from '@/services/dbServices';
+import '@/services/polyfill';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -25,15 +27,15 @@ const onboardingDoneScreen = () => {
     }
   };
 
-  const callOpenAIAPI = async (base64Image: string, prompt: string) => {
-    console.log('Calling dummy openAIAPI');
-  };
-
-  const handleNext = () => {
+  const handleNext = async () => {
     const user = auth.currentUser;
     if (schedule && user) {
-      updateUserSchedule(user.uid, schedule);
-      callOpenAIAPI(schedule, 'What do you see in this image?');
+      await updateUserSchedule(user.uid, schedule);
+      const result = await analyzeImage(
+        schedule,
+        'What do you see in the picture?',
+      );
+      console.log(result);
       router.push('/(onboarding)/doneScreen');
     } else {
       setErrorMessage('Please upload schedule');

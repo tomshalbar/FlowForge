@@ -1,4 +1,5 @@
 // Import the functions you need from the SDKs you need
+import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -21,6 +22,10 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const ai = getAI(app, { backend: new GoogleAIBackend() });
+export const model = getGenerativeModel(ai, {
+  model: 'gemini-3.1-flash-lite-preview',
+});
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
