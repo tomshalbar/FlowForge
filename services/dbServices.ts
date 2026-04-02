@@ -110,7 +110,7 @@ export async function updateUserPreferences(
 export async function updateUserSchedule(userId: string, schedule: string) {
   const docRef = doc(db, 'users', userId);
   const data = {
-    base64schedule: schedule,
+    schedule: schedule,
   };
   await setDoc(docRef, data, { merge: true })
     .then(() => {
