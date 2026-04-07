@@ -40,7 +40,7 @@ const onboardingDoneScreen = () => {
           schedule,
           `Task: Convert the attached image into a JSON format that will be saved in a database. Your response will be directly loaded into a typescript interface, so do not include any thing that will interfere with this logic. It should be a dictionary of days, with every day being a dictionary that maps a time of the day (in increments of 5 minutes), to the corresponding class. 
 
-Context: The Image is attached, and is in the form of base64 string. It should be of a schedule, if it is not, please return an empty dict. Every class period is 50 minutes, with 15 minutes between periods. You will need to extrapolate from the listed start time through the duration of the class, depending on how many periods the class is. Note that if there is no class during a time period, you do not need to include that time in that day's dict.
+Context: The Image is attached, and is in the form of base64 string. It should be of a schedule, if it is not, please return an empty dict. Every class period is 50 minutes, with 15 minutes between periods. So if you see a class block that extends across two periods for example, the total time will be 50 + 50 + 15 = 115. You will need to extrapolate from the listed start time through the duration of the class, depending on how many periods the class is. Please use your judgment in this. Note that if there is no class during a time period, you do not need to include that time in that day's dict.
 
 Format if there is a valid schedule attached: ${example_json}
 
