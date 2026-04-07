@@ -1,5 +1,8 @@
+import { auth } from '@/config/firebase';
+import { getSchedule } from '@/services/dbServices';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import schedule from '@/constants/tempSchedule.json';
@@ -11,9 +14,35 @@ import {
   timeToPosition,
 } from '@/logic/scheduleUtils';
 
+console.log;
 const mainAppPage = () => {
+  const [scheduleData, setScheduleData] = useState(schedule);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const data = await getSchedule(user.uid);
+        try {
+          const jsonData = JSON.parse(data);
+          setScheduleData(jsonData);
+        } catch (e) {
+          console.error('Invalid JSON string', e);
+          setErrorMessage('Failed to parse schedule data.');
+          return null;
+        }
+      } else {
+        console.log('No user is currently signed in.');
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe(); // Cleanup listener on unmount
+  }, []);
+
   const todayKey = getTodayKey();
-  const todaySchedule = schedule[todayKey as keyof typeof schedule];
+  const todaySchedule = scheduleData[todayKey as keyof typeof scheduleData];
   const grouped = groupSchedule(todaySchedule);
 
   return (
