@@ -44,6 +44,11 @@ const mainAppPage = () => {
   const todayKey = getTodayKey();
   const todaySchedule = scheduleData[todayKey as keyof typeof scheduleData];
   const grouped = groupSchedule(todaySchedule);
+  const start_time_str = Object.keys(todaySchedule).sort()[0];
+  const start_time = start_time_str
+    ? parseInt(start_time_str.split(':')[0])
+    : 5;
+  const PX_PER_HOUR = 160; // 160 pixels per hour
 
   return (
     <LinearGradient colors={['#F5B3B6', '#C94B52']} style={styles.gradient}>
@@ -55,24 +60,25 @@ const mainAppPage = () => {
         {/* timeline */}
         <View style={styles.timelineContainer}>
           {/* hour labels */}
-          {Array.from({ length: 16 }).map((_, i) => {
-            const hour = 8 + i;
+          {Array.from({ length: 24 - start_time }).map((_, i) => {
+            const hour = start_time + i;
             const display = hour > 12 ? hour - 12 : hour;
             const ampm = hour >= 12 ? 'PM' : 'AM';
 
             return (
-              <Text key={i} style={[styles.hour, { top: i * 80 }]}>
+              <Text key={i} style={[styles.hour, { top: i * PX_PER_HOUR }]}>
                 {display} {ampm}
               </Text>
             );
           })}
-
           {/* events */}
           {grouped.map((block, index) => {
-            const top = timeToPosition(block.start) * (80 / 60);
+            const top =
+              timeToPosition(block.start, start_time) * (PX_PER_HOUR / 60);
             const height =
-              (timeToPosition(block.end) - timeToPosition(block.start)) *
-              (80 / 60);
+              (timeToPosition(block.end, start_time) -
+                timeToPosition(block.start, start_time)) *
+              (PX_PER_HOUR / 60);
 
             return (
               <View
@@ -125,7 +131,7 @@ const styles = StyleSheet.create({
   },
 
   timelineContainer: {
-    height: 80 * 16, // 8 AM -> 12 AM
+    height: 160 * 19, // 5 AM -> 12 AM
     position: 'relative',
     marginLeft: 50,
   },

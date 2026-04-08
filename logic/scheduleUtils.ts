@@ -55,12 +55,13 @@ export const groupSchedule = (daySchedule: Record<string, string>) => {
   });
 
   if (currentBlock) blocks.push(currentBlock);
+  console.log(blocks.map((b) => `${b.name}: ${b.start} - ${b.end}`));
 
   return blocks;
 };
 
 // convert time to vertical position
-export const timeToPosition = (time: string) => {
+export const timeToPosition = (time: string, dayStart: number) => {
   const [h, m] = time.split(':').map(Number);
-  return h * 60 + m - 8 * 60; // start day at 8 AM
+  return h * 60 + m - dayStart * 60;
 };
