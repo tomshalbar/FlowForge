@@ -62,6 +62,30 @@ export async function getEmailNameTimes() {
   }
 }
 
+export async function getPreferences(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return {
+      exercise: userData.exercise_preference,
+      study: userData.study_preference,
+      relax: userData.relax_preference,
+    };
+  }
+}
+
+export async function getSchedule(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return userData.schedule;
+  }
+}
+
 export async function updateUserPersonalInfo(
   name: string,
   age: string,

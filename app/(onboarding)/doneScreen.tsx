@@ -1,17 +1,40 @@
 import { auth } from '@/config/firebase';
-import { setDoneOnboarding } from '@/services/dbServices';
+import { generateScheduleRecommendation } from '@/logic/coreAlgorithm';
+import {
+  getPreferences,
+  getSchedule,
+  setDoneOnboarding,
+  updateUserSchedule,
+} from '@/services/dbServices';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
 const onboardingDoneScreen = () => {
-  const handleDone = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleDone = async () => {
+    setIsLoading(true);
     const user = auth.currentUser;
     if (user) {
-      setDoneOnboarding(user.uid);
-      router.replace('/(tabs)');
+      const userSched = await getSchedule(user.uid);
+      const userPrefs = await getPreferences(user.uid);
+      if (userSched && userPrefs) {
+        const recommendation = await generateScheduleRecommendation(
+          userSched,
+          userPrefs,
+        );
+        updateUserSchedule(user.uid, recommendation);
+        setDoneOnboarding(user.uid);
+        router.replace('/(tabs)');
+      } else {
+        setIsLoading(false);
+        setErrorMessage('Missing schedule or preferences.');
+      }
     }
+    setIsLoading(false);
   };
 
   return (
@@ -34,14 +57,18 @@ const onboardingDoneScreen = () => {
         <>
           <Pressable
             onPress={handleDone}
+            disabled={isLoading}
             style={({ pressed }) => [
               styles.nextButton,
               {
                 transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                opacity: isLoading ? 0.5 : 1,
               },
             ]}
           >
-            <Text style={styles.buttonText}>Next</Text>
+            <Text style={styles.buttonText}>
+              {isLoading ? 'Processing...' : 'Next'}
+            </Text>
           </Pressable>
           <Pressable
             onPress={() => {
@@ -64,6 +91,14 @@ const onboardingDoneScreen = () => {
               </Text>
             )}
           </Pressable>
+          {errorMessage ? (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          ) : null}
+          {isLoading ? (
+            <Text style={{ marginTop: 10, fontSize: 16, color: '#555' }}>
+              Generating schedule...
+            </Text>
+          ) : null}
         </>
       }
     />
@@ -109,5 +144,11 @@ const styles = StyleSheet.create({
     marginTop: 15,
     fontSize: 18,
     textAlign: 'center',
+  },
+  errorText: {
+    color: 'red',
+    marginTop: 8,
+    marginBottom: 8,
+    fontSize: 14,
   },
 });
