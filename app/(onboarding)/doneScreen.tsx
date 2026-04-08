@@ -3,6 +3,7 @@ import { generateScheduleRecommendation } from '@/logic/coreAlgorithm';
 import {
   getPreferences,
   getSchedule,
+  getWakeUpAndSleepTime,
   setDoneOnboarding,
   updateUserSchedule,
 } from '@/services/dbServices';
@@ -21,10 +22,12 @@ const onboardingDoneScreen = () => {
     if (user) {
       const userSched = await getSchedule(user.uid);
       const userPrefs = await getPreferences(user.uid);
+      const userWakeSleepTime = await getWakeUpAndSleepTime(user.uid);
       if (userSched && userPrefs) {
         const recommendation = await generateScheduleRecommendation(
           userSched,
           userPrefs,
+          userWakeSleepTime,
         );
         updateUserSchedule(user.uid, recommendation);
         setDoneOnboarding(user.uid);

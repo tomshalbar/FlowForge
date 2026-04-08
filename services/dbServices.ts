@@ -1,6 +1,5 @@
 import { db } from '@/config/firebase';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { auth } from '../config/firebase';
 
 export interface UserProfile {
   email: string;
@@ -37,29 +36,29 @@ export async function registerBaseUser(email: string, uid: string) {
   }
 }
 
-export async function getEmailNameTimes() {
-  const curUser = auth.currentUser;
-  if (curUser) {
-    const curUserId = curUser.uid;
-    const userDocRef = doc(db, 'users', curUserId);
-    const userDocSnap = await getDoc(userDocRef);
+export async function getNameAndAge(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
 
-    if (userDocSnap.exists()) {
-      const userData = userDocSnap.data();
-      const name = userData.name ? userData.name : '';
-      const age = userData.age ? userData.age : '';
-      const wakeUpTime = userData.wake_up_time ? userData.wake_up_time : '';
-      const sleepTime = userData.sleep_time ? userData.sleep_time : '';
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return {
+      name: userData.name ?? '',
+      age: userData.age ?? '',
+    };
+  }
+}
 
-      const returnData: Map<string, string> = new Map([
-        ['name', name],
-        ['age', age],
-        ['wakeUpTime', wakeUpTime],
-        ['sleepTime', sleepTime],
-      ]);
+export async function getWakeUpAndSleepTime(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
 
-      return returnData;
-    }
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return {
+      wakeUpTime: userData.wake_up_time ?? '',
+      sleepTime: userData.sleep_time ?? '',
+    };
   }
 }
 
