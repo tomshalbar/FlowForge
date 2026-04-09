@@ -8,7 +8,8 @@
     "scheme": "flowforge",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.flowForge"
     },
     "android": {
       "adaptiveIcon": {
