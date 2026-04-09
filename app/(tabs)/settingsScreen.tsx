@@ -99,14 +99,14 @@ const settingPage = () => {
   const handleSave = () => {
     // TODO: teammate will connect backend here
 
-    console.log({
+    /*console.log({
       name,
       age,
       wakeTime,
       sleepTime,
       preferences: values,
       schedule,
-    });
+    });*/
 
     // maybe show confirmation later
   };
