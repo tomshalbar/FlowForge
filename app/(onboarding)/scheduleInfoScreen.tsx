@@ -12,6 +12,7 @@ const onboardingDoneScreen = () => {
   const [schedule, setSchedule] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
 
   const uploadImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -22,7 +23,9 @@ const onboardingDoneScreen = () => {
     if (!result.canceled) {
       if (result.assets[0].base64) {
         const base64Data = result.assets[0].base64;
+        const uri = result.assets[0].uri;
         setSchedule(base64Data);
+        setImageUri(uri);
         console.log('image uploaded succesfully');
       }
     }
@@ -84,7 +87,11 @@ Format if there is there is no valid schedule attached, or if you there is anyth
             ]}
           >
             <Image
-              source={require('../../assets/images/temp_upload_icon.png')}
+              source={
+                imageUri
+                  ? { uri: imageUri }
+                  : require('../../assets/images/temp_upload_icon.png')
+              }
               style={[
                 styles.upload_icon,
                 {

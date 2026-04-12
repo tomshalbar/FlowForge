@@ -30,13 +30,30 @@ const settingPage = () => {
   });
 
   const [schedule, setSchedule] = useState('');
+  const [imageUri, setImageUri] = useState<string | null>(null);
 
   // same times as onboarding
   const times = [
-    '5:00 AM','6:00 AM','7:00 AM','8:00 AM','9:00 AM',
-    '10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM',
-    '3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM',
-    '8:00 PM','9:00 PM','10:00 PM','11:00 PM','12:00 AM',
+    '5:00 AM',
+    '6:00 AM',
+    '7:00 AM',
+    '8:00 AM',
+    '9:00 AM',
+    '10:00 AM',
+    '11:00 AM',
+    '12:00 PM',
+    '1:00 PM',
+    '2:00 PM',
+    '3:00 PM',
+    '4:00 PM',
+    '5:00 PM',
+    '6:00 PM',
+    '7:00 PM',
+    '8:00 PM',
+    '9:00 PM',
+    '10:00 PM',
+    '11:00 PM',
+    '12:00 AM',
   ];
 
   // same logic as preferences screen :contentReference[oaicite:0]{index=0}
@@ -50,7 +67,7 @@ const settingPage = () => {
       if (diff === 0) return prev;
 
       const others = (Object.keys(prev) as (keyof typeof prev)[]).filter(
-        (k) => k !== key
+        (k) => k !== key,
       );
 
       if (diff > 0) {
@@ -91,14 +108,18 @@ const settingPage = () => {
     });
 
     if (!result.canceled && result.assets[0].base64) {
+      const uri = result.assets[0].uri;
       setSchedule(result.assets[0].base64);
+      setImageUri(uri);
       console.log('schedule uploaded');
     }
   };
 
   const handleSave = () => {
+    // For now just log "Saved!" and reset sechedule button image
+    setImageUri(null);
+    console.log('Saved!');
     // TODO: teammate will connect backend here
-
     /*console.log({
       name,
       age,
@@ -107,7 +128,6 @@ const settingPage = () => {
       preferences: values,
       schedule,
     });*/
-
     // maybe show confirmation later
   };
 
@@ -116,9 +136,7 @@ const settingPage = () => {
       headerContent={
         <>
           <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>
-            Update your preferences anytime
-          </Text>
+          <Text style={styles.subtitle}>Update your preferences anytime</Text>
         </>
       }
       middleContent={
@@ -221,13 +239,15 @@ const settingPage = () => {
 
           <Pressable onPress={uploadImage}>
             <Image
-              source={require('../../assets/images/temp_upload_icon.png')}
+              source={
+                imageUri
+                  ? { uri: imageUri }
+                  : require('../../assets/images/temp_upload_icon.png')
+              }
               style={[
                 styles.upload_icon,
                 {
-                  borderColor: schedule
-                    ? 'rgb(37,37,37)'
-                    : 'rgb(184,184,184)',
+                  borderColor: schedule ? 'rgb(37,37,37)' : 'rgb(184,184,184)',
                 },
               ]}
             />
@@ -287,19 +307,19 @@ const styles = StyleSheet.create({
   },
 
   dropdown: {
-  width: '100%',
-  maxWidth: 354,
-  height: 150,
-  backgroundColor: 'white',
-  borderRadius: 15,
-  marginBottom: 20,
-  justifyContent: 'center',
-  overflow: 'hidden',
+    width: '100%',
+    maxWidth: 354,
+    height: 150,
+    backgroundColor: 'white',
+    borderRadius: 15,
+    marginBottom: 20,
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
 
   pickerItem: {
-  color: 'black',
-  fontSize: 20,
+    color: 'black',
+    fontSize: 20,
   },
 
   sectionTitle: {
