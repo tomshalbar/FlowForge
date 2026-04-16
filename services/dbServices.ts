@@ -49,6 +49,35 @@ export async function getNameAndAge(userId: string) {
   }
 }
 
+export async function getUserData(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return [
+      userData.name ?? '',
+      userData.age.toString() ?? '',
+      userData.wake_up_time ?? '',
+      userData.sleep_time ?? '',
+      userData.study_preference ?? '',
+      userData.exercise_preference ?? '',
+      userData.relax_preference ?? '',
+      userData.schedule,
+    ];
+  }
+}
+
+export async function getUserAge(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return userData.name ?? '';
+  }
+}
+
 export async function getWakeUpAndSleepTime(userId: string) {
   const userDocRef = doc(db, 'users', userId);
   const userDocSnap = await getDoc(userDocRef);
@@ -86,6 +115,16 @@ export async function getSchedule(userId: string) {
   }
 }
 
+export async function getGeneratedSchedule(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return userData.generatedSchedule;
+  }
+}
+
 export async function updateUserPersonalInfo(
   name: string,
   age: string,
@@ -103,6 +142,62 @@ export async function updateUserPersonalInfo(
   await setDoc(docRef, data, { merge: true })
     .then(() => {
       console.log('presonal info successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
+export async function updateUserName(name: string, userId: string) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    name: name,
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('name successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
+export async function updateUserAge(age: string, userId: string) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    age: parseInt(age, 10),
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('age successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
+export async function updateUserWakeUpTime(wakeUpTime: string, userId: string) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    wake_up_time: wakeUpTime,
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('wake-up-time successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
+export async function updateUserSleepTime(sleepTime: string, userId: string) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    sleep_time: sleepTime,
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('sleep-time successfully written or updated!');
     })
     .catch((error) => {
       console.error('Error writing or updating document: ', error);
@@ -138,6 +233,23 @@ export async function updateUserSchedule(userId: string, schedule: string) {
   await setDoc(docRef, data, { merge: true })
     .then(() => {
       console.log('Schedule successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
+export async function updateUserGeneratedSchedule(
+  userId: string,
+  schedule: string,
+) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    generatedSchedule: schedule,
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('genrated schedule successfully written or updated!');
     })
     .catch((error) => {
       console.error('Error writing or updating document: ', error);

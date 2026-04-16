@@ -5,7 +5,7 @@ import {
   getSchedule,
   getWakeUpAndSleepTime,
   setDoneOnboarding,
-  updateUserSchedule,
+  updateUserGeneratedSchedule,
 } from '@/services/dbServices';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -29,7 +29,7 @@ const onboardingDoneScreen = () => {
           userPrefs,
           userWakeSleepTime,
         );
-        updateUserSchedule(user.uid, recommendation);
+        updateUserGeneratedSchedule(user.uid, recommendation);
         setDoneOnboarding(user.uid);
         router.replace('/(tabs)');
       } else {

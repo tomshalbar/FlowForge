@@ -1,10 +1,4 @@
 import { auth } from '@/config/firebase';
-import { getSchedule } from '@/services/dbServices';
-import { LinearGradient } from 'expo-linear-gradient';
-import { onAuthStateChanged } from 'firebase/auth';
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-
 import schedule from '@/constants/tempSchedule.json';
 import {
   formatTime,
@@ -13,6 +7,11 @@ import {
   groupSchedule,
   timeToPosition,
 } from '@/logic/scheduleUtils';
+import { getGeneratedSchedule } from '@/services/dbServices';
+import { useFocusEffect } from '@react-navigation/core';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 console.log;
 const mainAppPage = () => {
@@ -20,26 +19,30 @@ const mainAppPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const data = await getSchedule(user.uid);
-        try {
-          const jsonData = JSON.parse(data);
-          setScheduleData(jsonData);
-        } catch (e) {
-          console.error('Invalid JSON string', e);
-          setErrorMessage('Failed to parse schedule data.');
-          return null;
+  useFocusEffect(
+    useCallback(() => {
+      console.log('calling use effect');
+      const fetchData = async () => {
+        const baseUser = auth.currentUser;
+        if (baseUser) {
+          const data = await getGeneratedSchedule(baseUser.uid);
+          try {
+            const jsonData = JSON.parse(data);
+            setScheduleData(jsonData);
+          } catch (e) {
+            console.error('Invalid JSON string', e);
+            setErrorMessage('Failed to parse schedule data.');
+            return null;
+          }
+        } else {
+          console.log('No user is currently signed in.');
         }
-      } else {
-        console.log('No user is currently signed in.');
-      }
-      setLoading(false);
-    });
+        setLoading(false);
+      };
 
-    return () => unsubscribe(); // Cleanup listener on unmount
-  }, []);
+      fetchData(); // Cleanup listener on unmount
+    }, []),
+  );
 
   const todayKey = getTodayKey();
   const todaySchedule = scheduleData[todayKey as keyof typeof scheduleData];

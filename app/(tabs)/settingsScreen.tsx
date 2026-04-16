@@ -1,7 +1,21 @@
+import { auth } from '@/config/firebase';
+import { generateScheduleRecommendation } from '@/logic/coreAlgorithm';
+import { analyzeImage } from '@/services/aiServices';
+import {
+  getUserData,
+  updateUserAge,
+  updateUserGeneratedSchedule,
+  updateUserName,
+  updateUserPreferences,
+  updateUserSchedule,
+  updateUserSleepTime,
+  updateUserWakeUpTime,
+} from '@/services/dbServices';
 import Slider from '@react-native-community/slider';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
 import {
   Image,
   Pressable,
@@ -20,17 +34,126 @@ const settingPage = () => {
   // same state as onboarding just editable
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
-  const [wakeTime, setWakeTime] = useState('7:00 AM');
-  const [sleepTime, setSleepTime] = useState('11:00 PM');
-
-  const [values, setValues] = useState({
-    study: 40,
-    exercise: 30,
-    relax: 30,
+  const [wakeTime, setWakeTime] = useState('');
+  const [sleepTime, setSleepTime] = useState('');
+  const [prefValues, setPrefValues] = useState({
+    study: '',
+    exercise: '',
+    relax: '',
   });
-
-  const [schedule, setSchedule] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState<string | null>(null);
+  const [scheduleJson, setScheduleJson] = useState<string | null>(null);
+  useEffect(() => {
+    const fetchData = async () => {
+      const baseUser = auth.currentUser;
+      if (!baseUser) return;
+
+      const data = (await getUserData(baseUser.uid)) ?? [
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+      ];
+
+      // Set all states from fetched data
+      setName(data[0]);
+      setAge(data[1]);
+      setWakeTime(data[2]);
+      setSleepTime(data[3]);
+      setPrefValues({
+        study: data[4],
+        exercise: data[5],
+        relax: data[6],
+      });
+      setScheduleJson(data[7]);
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  const handleSave = async () => {
+    setIsLoading(true);
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        if (name) {
+          updateUserName(name, user.uid);
+        }
+        if (age) {
+          updateUserAge(age, user.uid);
+        }
+        if (wakeTime) {
+          updateUserWakeUpTime(wakeTime, user.uid);
+        }
+        if (sleepTime) {
+          updateUserSleepTime(sleepTime, user.uid);
+        }
+        if (prefValues) {
+          updateUserPreferences(
+            +prefValues['exercise'],
+            +prefValues['study'],
+            +prefValues['relax'],
+            user.uid,
+          );
+        }
+        if (schedule) {
+          setErrorMessage('');
+          const example_json =
+            "{'monday': {'08:30': 'CIS4301', '08:35': 'CIS4301', ..., '14:35': 'CIS4930' '14:40': 'CIS4930'}, ..., 'Friday': { '09:35': 'COP4533', '09:40': 'COP4533', ... '14:35': 'CIS4930', '14:40': 'CIS4930'}}";
+          const result = await analyzeImage(
+            schedule,
+            `Task: Convert the attached image into a JSON format that will be saved in a database. In the attached image, days are placed one after another horizontaly, while the vertical direction shows the classes for each day. Your response will be directly loaded into a typescript interface, so do not include any thing that will interfere with this logic. It should be a dictionary of days, with every day being a dictionary that maps a time of the day (in increments of 5 minutes), to the corresponding class. 
+            
+            Context: The Image is attached, and is in the form of base64 string. Here is the mapping logic from the schedule to the JSON: start Time: Use the text inside the block (e.g., "11:45 AM"). End Time: Calculate based on the number of Period rows (vertical length) the colored block occupies. 1 Period (seen in the y-axis of the grid) = 50 mins. 2 Periods = 115 mins (50+15+50). so if you see that a class spans two blocks, ensure that you extrapolate this to 115 mintues. PLEASE DON'T MISS THIS PART. Resolution: Map every 5-minute increment from Start to End (inclusive). If a class block's visual duration conflicts with its written start time, prioritize the written start time and use the period grid to determine the end time. In addition, you do not need to list any class that doens't correspond to any time block in the grid, since it is an online class. Note that if there is no class during a time period, you do not need to include that time in that day's dict.
+            
+            Assumptions: You need to assume that the period length is not determined by where the text is located on the grid, but only by the area the background color covers. The text relative position means nothing. Assume that you are really bad at detecting continuous colored regions across grid cells, so pay extra attention to this detail. This may help you with this For each class, determine the top and bottom boundaries of its colored region. Count how many row segments it spans vertically. Do not rely on text placement—only measure the vertical height of the colored rectangle. If a class spans multiple periods, the colored rectangle will be taller than others. Compare heights across classes to detect this. So if a class block spans two periods (background color continous across two periods), the class takes two periods even though there is text in only one of the blocks. Do not assume that each class only takes 50 minutes. 
+            
+            Chain of thought: first, determine which classes take up more than block. This will be clear to you by the background color of them. Second, determine the start time for each class. Third, calculate the end time for each class based on the start time and the number of blocks the background color covers. Last, place everything in the JSON appropriatly.
+        
+            Format if there is a valid schedule attached: ${example_json}. Return ONLY the JSON object. No markdown blocks, no conversational filler. If a day is empty, return an empty dictionary for that key
+            
+            Format if there is there is no valid schedule attached, or if you there is something that is hindering you from performing the task as described: {'monday': {}, 'tuesday': {}, 'wednesday': {}, 'thursday': {}, 'friday': {}}`,
+          );
+          if (result != null) {
+            setScheduleJson(result);
+            updateUserSchedule(user.uid, result);
+          }
+        }
+        const userSched = scheduleJson;
+        const userPrefs = {
+          exercise: +prefValues['exercise'],
+          study: +prefValues['study'],
+          relax: +prefValues['relax'],
+        };
+        const userWakeSleepTime = {
+          wakeUpTime: wakeTime,
+          sleepTime: sleepTime,
+        };
+        if (userSched && userPrefs) {
+          const recommendation = await generateScheduleRecommendation(
+            userSched,
+            userPrefs,
+            userWakeSleepTime,
+          );
+          updateUserGeneratedSchedule(user.uid, recommendation);
+        }
+      }
+    } catch (error) {
+      setErrorMessage('Error processing information. Please try later.');
+      setIsLoading(false);
+      setSchedule('');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // same times as onboarding
   const times = [
@@ -58,11 +181,11 @@ const settingPage = () => {
 
   // same logic as preferences screen :contentReference[oaicite:0]{index=0}
   const updateSlider = (key: 'study' | 'exercise' | 'relax', val: number) => {
-    setValues((prev) => {
+    setPrefValues((prev) => {
       const next = { ...prev };
       const target = Math.round(val);
 
-      const diff = target - prev[key];
+      const diff = target - +prev[key];
 
       if (diff === 0) return prev;
 
@@ -74,9 +197,9 @@ const settingPage = () => {
         // take from others
         let remaining = diff;
         for (let o of others) {
-          const available = next[o] - MIN;
+          const available = +next[o] - MIN;
           const take = Math.min(available, remaining);
-          next[o] -= take;
+          next[o] = +next[o] - take;
           remaining -= take;
         }
         next[key] = target - remaining;
@@ -94,7 +217,7 @@ const settingPage = () => {
 
       // force sum = 100
       const sum = next.study + next.exercise + next.relax;
-      if (sum !== TOTAL) next[key] += TOTAL - sum;
+      if (+sum !== TOTAL) next[key] += TOTAL - +sum;
 
       return next;
     });
@@ -115,22 +238,6 @@ const settingPage = () => {
     }
   };
 
-  const handleSave = () => {
-    // For now just log "Saved!" and reset sechedule button image
-    setImageUri(null);
-    console.log('Saved!');
-    // TODO: teammate will connect backend here
-    /*console.log({
-      name,
-      age,
-      wakeTime,
-      sleepTime,
-      preferences: values,
-      schedule,
-    });*/
-    // maybe show confirmation later
-  };
-
   return (
     <AuthScreenLayout
       headerContent={
@@ -147,6 +254,7 @@ const settingPage = () => {
             style={styles.inputs}
             placeholder="Name"
             placeholderTextColor="rgba(180,180,180,1)"
+            defaultValue={name}
             onChangeText={setName}
           />
 
@@ -154,6 +262,7 @@ const settingPage = () => {
             style={styles.inputs}
             placeholder="Age"
             keyboardType="number-pad"
+            defaultValue={age}
             placeholderTextColor="rgba(180,180,180,1)"
             onChangeText={(t) => setAge(t)}
           />
@@ -195,12 +304,12 @@ const settingPage = () => {
               minimumValue={MIN}
               maximumValue={MAX}
               step={5}
-              value={values.study}
+              value={+prefValues.study}
               minimumTrackTintColor="red"
               maximumTrackTintColor="#ddd"
               onValueChange={(v) => updateSlider('study', v)}
             />
-            <Text style={styles.percent}>{values.study}%</Text>
+            <Text style={styles.percent}>{prefValues.study}%</Text>
           </View>
 
           <Text style={styles.sliderLabel}>Exercise</Text>
@@ -210,12 +319,12 @@ const settingPage = () => {
               minimumValue={MIN}
               maximumValue={MAX}
               step={5}
-              value={values.exercise}
+              value={+prefValues.exercise}
               minimumTrackTintColor="darkred"
               maximumTrackTintColor="#ddd"
               onValueChange={(v) => updateSlider('exercise', v)}
             />
-            <Text style={styles.percent}>{values.exercise}%</Text>
+            <Text style={styles.percent}>{prefValues.exercise}%</Text>
           </View>
 
           <Text style={styles.sliderLabel}>Relax</Text>
@@ -225,12 +334,12 @@ const settingPage = () => {
               minimumValue={MIN}
               maximumValue={MAX}
               step={5}
-              value={values.relax}
+              value={+prefValues.relax}
               minimumTrackTintColor="hotpink"
               maximumTrackTintColor="#ddd"
               onValueChange={(v) => updateSlider('relax', v)}
             />
-            <Text style={styles.percent}>{values.relax}%</Text>
+            <Text style={styles.percent}>{prefValues.relax}%</Text>
           </View>
 
           {/* ---------- SCHEDULE ---------- */}
@@ -258,15 +367,22 @@ const settingPage = () => {
         <>
           <Pressable
             onPress={handleSave}
+            disabled={isLoading}
             style={({ pressed }) => [
               styles.button,
               {
                 transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                opacity: isLoading ? 0.5 : 1,
               },
             ]}
           >
             <Text style={styles.buttonText}>Save</Text>
           </Pressable>
+          {isLoading ? (
+            <Text style={{ marginTop: 10, fontSize: 16, color: '#555' }}>
+              Updating information.
+            </Text>
+          ) : null}
         </>
       }
     />

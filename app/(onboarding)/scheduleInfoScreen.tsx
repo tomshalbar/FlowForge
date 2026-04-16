@@ -15,9 +15,10 @@ const onboardingDoneScreen = () => {
   const [imageUri, setImageUri] = useState<string | null>(null);
 
   const uploadImage = async () => {
+    setIsLoading(true);
     const result = await ImagePicker.launchImageLibraryAsync({
       base64: true,
-      quality: 0.2,
+      quality: 1,
     });
 
     if (!result.canceled) {
@@ -29,6 +30,7 @@ const onboardingDoneScreen = () => {
         console.log('image uploaded succesfully');
       }
     }
+    setIsLoading(false);
   };
 
   const handleNext = async () => {
@@ -41,15 +43,18 @@ const onboardingDoneScreen = () => {
           "{'monday': {'08:30': 'CIS4301', '08:35': 'CIS4301', ..., '14:35': 'CIS4930' '14:40': 'CIS4930'}, ..., 'Friday': { '09:35': 'COP4533', '09:40': 'COP4533', ... '14:35': 'CIS4930', '14:40': 'CIS4930'}}";
         const result = await analyzeImage(
           schedule,
-          `Task: Convert the attached image into a JSON format that will be saved in a database. Your response will be directly loaded into a typescript interface, so do not include any thing that will interfere with this logic. It should be a dictionary of days, with every day being a dictionary that maps a time of the day (in increments of 5 minutes), to the corresponding class. 
-
-Context: The Image is attached, and is in the form of base64 string. It should be of a schedule, if it is not, please return an empty dict. Every class period is 50 minutes, with 15 minutes between periods. So if you see a class block that extends across two periods for example, the total time will be 50 + 50 + 15 = 115. You will need to extrapolate from the listed start time through the duration of the class, depending on how many periods the class is. Please use your judgment in this. Note that if there is no class during a time period, you do not need to include that time in that day's dict.
-
-Format if there is a valid schedule attached: ${example_json}
-
-Format if there is there is no valid schedule attached, or if you there is anything that is hindering you from performing the task exactly as described: {'monday': {}, 'tuesday': {}, 'wednesday': {}, 'thursday': {}, 'friday': {}}`,
+          `Task: Convert the attached image into a JSON format that will be saved in a database. In the attached image, days are placed one after another horizontaly, while the vertical direction shows the classes for each day. Your response will be directly loaded into a typescript interface, so do not include any thing that will interfere with this logic. It should be a dictionary of days, with every day being a dictionary that maps a time of the day (in increments of 5 minutes), to the corresponding class. 
+            
+            Context: The Image is attached, and is in the form of base64 string. Here is the mapping logic from the schedule to the JSON: start Time: Use the text inside the block (e.g., "11:45 AM"). End Time: Calculate based on the number of Period rows (vertical length) the colored block occupies. 1 Period (seen in the y-axis of the grid) = 50 mins. 2 Periods = 115 mins (50+15+50). so if you see that a class spans two blocks, ensure that you extrapolate this to 115 mintues. PLEASE DON'T MISS THIS PART. Resolution: Map every 5-minute increment from Start to End (inclusive). If a class block's visual duration conflicts with its written start time, prioritize the written start time and use the period grid to determine the end time. In addition, you do not need to list any class that doens't correspond to any time block in the grid, since it is an online class. Note that if there is no class during a time period, you do not need to include that time in that day's dict.
+            
+            Assumptions: You need to assume that the period length is not determined by where the text is located on the grid, but only by the area the background color covers. The text relative position means nothing. Assume that you are really bad at detecting continuous colored regions across grid cells, so pay extra attention to this detail. This may help you with this For each class, determine the top and bottom boundaries of its colored region. Count how many row segments it spans vertically. Do not rely on text placement—only measure the vertical height of the colored rectangle. If a class spans multiple periods, the colored rectangle will be taller than others. Compare heights across classes to detect this. So if a class block spans two periods (background color continous across two periods), the class takes two periods even though there is text in only one of the blocks. Do not assume that each class only takes 50 minutes. 
+            
+            Chain of thought: first, determine which classes take up more than block. This will be clear to you by the background color of them. Second, determine the start time for each class. Third, calculate the end time for each class based on the start time and the number of blocks the background color covers. Last, place everything in the JSON appropriatly.
+        
+            Format if there is a valid schedule attached: ${example_json}. Return ONLY the JSON object. No markdown blocks, no conversational filler. If a day is empty, return an empty dictionary for that key
+            
+            Format if there is there is no valid schedule attached, or if you there is something that is hindering you from performing the task as described: {'monday': {}, 'tuesday': {}, 'wednesday': {}, 'thursday': {}, 'friday': {}}`,
         );
-        ``;
         if (result != null) {
           await updateUserSchedule(user.uid, result);
         }
