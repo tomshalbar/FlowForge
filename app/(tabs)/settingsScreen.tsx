@@ -4,6 +4,7 @@ import { analyzeImage } from '@/services/aiServices';
 import {
   getUserData,
   updateUserAge,
+  updateUserGeneratedSchedule,
   updateUserName,
   updateUserPreferences,
   updateUserSchedule,
@@ -44,12 +45,14 @@ const settingPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<string | null>(null);
+  const [scheduleJson, setScheduleJson] = useState<string | null>(null);
   useEffect(() => {
     const fetchData = async () => {
       const baseUser = auth.currentUser;
       if (!baseUser) return;
 
       const data = (await getUserData(baseUser.uid)) ?? [
+        '',
         '',
         '',
         '',
@@ -69,6 +72,7 @@ const settingPage = () => {
         exercise: data[5],
         relax: data[6],
       });
+      setScheduleJson(data[7]);
       setIsLoading(false);
     };
 
@@ -76,6 +80,7 @@ const settingPage = () => {
   }, []);
 
   const handleSave = async () => {
+    console.log(scheduleJson);
     setIsLoading(true);
     try {
       const user = auth.currentUser;
@@ -119,25 +124,28 @@ const settingPage = () => {
             Format if there is there is no valid schedule attached, or if you there is something that is hindering you from performing the task as described: {'monday': {}, 'tuesday': {}, 'wednesday': {}, 'thursday': {}, 'friday': {}}`,
           );
           if (result != null) {
-            const userSched = result;
-            const userPrefs = {
-              exercise: +prefValues['exercise'],
-              study: +prefValues['study'],
-              relax: +prefValues['relax'],
-            };
-            const userWakeSleepTime = {
-              wakeUpTime: wakeTime,
-              sleepTime: sleepTime,
-            };
-            if (userSched && userPrefs) {
-              const recommendation = await generateScheduleRecommendation(
-                userSched,
-                userPrefs,
-                userWakeSleepTime,
-              );
-              updateUserSchedule(user.uid, recommendation);
-            }
+            setScheduleJson(result);
+            updateUserSchedule(user.uid, result);
           }
+        }
+        console.log(scheduleJson);
+        const userSched = scheduleJson;
+        const userPrefs = {
+          exercise: +prefValues['exercise'],
+          study: +prefValues['study'],
+          relax: +prefValues['relax'],
+        };
+        const userWakeSleepTime = {
+          wakeUpTime: wakeTime,
+          sleepTime: sleepTime,
+        };
+        if (userSched && userPrefs) {
+          const recommendation = await generateScheduleRecommendation(
+            userSched,
+            userPrefs,
+            userWakeSleepTime,
+          );
+          updateUserGeneratedSchedule(user.uid, recommendation);
         }
       }
     } catch (error) {

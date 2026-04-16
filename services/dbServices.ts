@@ -63,6 +63,7 @@ export async function getUserData(userId: string) {
       userData.study_preference ?? '',
       userData.exercise_preference ?? '',
       userData.relax_preference ?? '',
+      userData.schedule,
     ];
   }
 }
@@ -111,6 +112,16 @@ export async function getSchedule(userId: string) {
   if (userDocSnap.exists()) {
     const userData = userDocSnap.data();
     return userData.schedule;
+  }
+}
+
+export async function getGeneratedSchedule(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return userData.generatedSchedule;
   }
 }
 
@@ -222,6 +233,23 @@ export async function updateUserSchedule(userId: string, schedule: string) {
   await setDoc(docRef, data, { merge: true })
     .then(() => {
       console.log('Schedule successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
+export async function updateUserGeneratedSchedule(
+  userId: string,
+  schedule: string,
+) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    generatedSchedule: schedule,
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('genrated schedule successfully written or updated!');
     })
     .catch((error) => {
       console.error('Error writing or updating document: ', error);
