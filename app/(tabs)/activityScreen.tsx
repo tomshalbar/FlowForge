@@ -1,9 +1,9 @@
-import AuthScreenLayout from '@/app/screenTemplate';
 import { auth } from '@/config/firebase';
 import { getSchedule } from '@/services/dbServices';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import AuthScreenLayout from '../screenTemplate';
 
 const SIZE = 200;
 const STROKE_WIDTH = 10;
@@ -18,14 +18,37 @@ const activityConfig: any = {
   class: { color: '#845EC2', emoji: '🏫', messages: ['Stay engaged.', 'Pay attention.', 'Take notes.'] },
 };
 
+const exerciseCycle = [
+  { name: 'Stretch', time: 20 },
+  { name: 'Rest', time: 10 },
+  { name: 'Push-ups', time: 20 },
+  { name: 'Rest', time: 10 },
+  { name: 'Plank', time: 20 },
+  { name: 'Rest', time: 10 },
+  { name: 'Sit-ups', time: 20 },
+  { name: 'Rest', time: 10 },
+];
+
+const studyCycle = [
+  { name: 'Work', time: 1500 },
+  { name: 'Break', time: 300 },
+];
+
+const relaxCycle = [
+  { name: 'Deep Breathing', time: 60 },
+  { name: 'Clear Mind', time: 60 },
+  { name: 'Slow Breathing', time: 60 },
+];
+
 const activityPage = () => {
   const [activity, setActivity] = useState<any>('study');
   const [className, setClassName] = useState('');
   const [message, setMessage] = useState('');
+
+  const [subIndex, setSubIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
   const [totalTime, setTotalTime] = useState(60);
 
-  // format current time to match schedule keys (HH:MM)
   const getCurrentTimeKey = () => {
     const now = new Date();
     const minutes = Math.floor(now.getMinutes() / 5) * 5;
@@ -38,7 +61,6 @@ const activityPage = () => {
     return new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   };
 
-  // 🔥 ACTUAL SCHEDULE LOGIC
   const loadActivityFromSchedule = async () => {
     const user = auth.currentUser;
     if (!user) return;
@@ -62,7 +84,6 @@ const activityPage = () => {
       setActivity(lower);
       setClassName('');
     } else {
-      // it's a class code
       setActivity('class');
       setClassName(value);
     }
@@ -70,61 +91,96 @@ const activityPage = () => {
 
   useEffect(() => {
     loadActivityFromSchedule();
-
-    // refresh every minute
     const interval = setInterval(loadActivityFromSchedule, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // random message
   useEffect(() => {
     const msgs = activityConfig[activity].messages;
     setMessage(msgs[Math.floor(Math.random() * msgs.length)]);
-
-    // timers per activity
-    if (activity === 'study') {
-      setTimeLeft(1500);
-      setTotalTime(1500);
-    } else if (activity === 'exercise') {
-      setTimeLeft(30);
-      setTotalTime(30);
-    } else if (activity === 'relax') {
-      setTimeLeft(60);
-      setTotalTime(60);
-    } else {
-      setTimeLeft(0);
-      setTotalTime(0);
-    }
+    setSubIndex(0);
   }, [activity]);
 
-  // countdown
+  // ONLY run timer logic if NOT class or meal
   useEffect(() => {
-    if (timeLeft <= 0) return;
+    if (activity === 'class' || activity === 'meal') return;
+
+    let current;
+
+    if (activity === 'exercise') current = exerciseCycle[subIndex % exerciseCycle.length];
+    else if (activity === 'study') current = studyCycle[subIndex % studyCycle.length];
+    else if (activity === 'relax') current = relaxCycle[subIndex % relaxCycle.length];
+
+    if (!current) return;
+
+    setTimeLeft(current.time);
+    setTotalTime(current.time);
+  }, [subIndex, activity]);
+
+  useEffect(() => {
+    if (activity === 'class' || activity === 'meal') return;
+
+    if (timeLeft <= 0) {
+      setSubIndex((prev) => prev + 1);
+      return;
+    }
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => prev - 1);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [timeLeft, activity]);
 
-  // progress math
-  const progress = totalTime > 0 ? timeLeft / totalTime : 0;
+  const getCurrentSub = () => {
+    if (activity === 'exercise') return exerciseCycle[subIndex % exerciseCycle.length].name;
+    if (activity === 'study') return studyCycle[subIndex % studyCycle.length].name;
+    if (activity === 'relax') return relaxCycle[subIndex % relaxCycle.length].name;
+    return '';
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const progress =
+    activity === 'class' || activity === 'meal'
+      ? 0
+      : totalTime > 0
+      ? timeLeft / totalTime
+      : 0;
+
   const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
 
   return (
     <AuthScreenLayout
       headerContent={
-        <Text style={[styles.title, { color: activityConfig[activity].color }]}>
-          {activity === 'class' ? className : activity.toUpperCase()}
-        </Text>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={[styles.title, { color: activityConfig[activity].color }]}>
+            {activity.toUpperCase()}
+          </Text>
+          {activity === 'class' && (
+            <Text style={styles.classCode}>{className}</Text>
+          )}
+        </View>
       }
       middleContent={
         <View style={styles.middleContainer}>
-          {/* 🔥 REAL CIRCULAR TIMER */}
+          {/* sub activity */}
+          {activity !== 'class' && activity !== 'meal' && (
+            <Text style={styles.subText}>{getCurrentSub()}</Text>
+          )}
+
+          {/* timer text */}
+          {activity !== 'class' && activity !== 'meal' && (
+            <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+          )}
+
+          {/* circle */}
           <View>
             <Svg width={SIZE} height={SIZE}>
-              {/* background circle */}
               <Circle
                 stroke={activityConfig[activity].color + '30'}
                 fill="none"
@@ -133,24 +189,23 @@ const activityPage = () => {
                 r={RADIUS}
                 strokeWidth={STROKE_WIDTH}
               />
-
-              {/* progress circle */}
-              <Circle
-                stroke="white"
-                fill="none"
-                cx={SIZE / 2}
-                cy={SIZE / 2}
-                r={RADIUS}
-                strokeWidth={STROKE_WIDTH}
-                strokeDasharray={CIRCUMFERENCE}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                rotation="-90"
-                origin={`${SIZE / 2}, ${SIZE / 2}`}
-              />
+              {activity !== 'class' && activity !== 'meal' && (
+                <Circle
+                  stroke="white"
+                  fill="none"
+                  cx={SIZE / 2}
+                  cy={SIZE / 2}
+                  r={RADIUS}
+                  strokeWidth={STROKE_WIDTH}
+                  strokeDasharray={CIRCUMFERENCE}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  rotation="-90"
+                  origin={`${SIZE / 2}, ${SIZE / 2}`}
+                />
+              )}
             </Svg>
 
-            {/* emoji in center */}
             <View style={styles.emojiContainer}>
               <Text style={styles.emoji}>{activityConfig[activity].emoji}</Text>
             </View>
@@ -179,9 +234,22 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '600',
   },
+  classCode: {
+    fontSize: 18,
+    color: '#333',
+    marginTop: 5,
+  },
   middleContainer: {
     alignItems: 'center',
-    gap: 30,
+    gap: 15,
+  },
+  subText: {
+    fontSize: 20,
+    color: '#333',
+  },
+  timerText: {
+    fontSize: 18,
+    color: '#333',
   },
   emojiContainer: {
     position: 'absolute',
@@ -196,6 +264,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#333',
     paddingHorizontal: 20,
+    marginTop: 20,
   },
   buttonRow: {
     flexDirection: 'row',
