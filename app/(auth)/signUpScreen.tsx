@@ -35,7 +35,7 @@ const SignUpScreen = () => {
       registerBaseUser(email, userCredentials.user.uid);
       router.replace('/(onboarding)');
     } catch (error: any) {
-      setErrorMessage('Error signing up');
+      setErrorMessage(error.message);
       console.log('Firebase sign-in error:', error);
     }
   };

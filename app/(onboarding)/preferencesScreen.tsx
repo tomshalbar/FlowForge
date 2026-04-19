@@ -6,92 +6,18 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
-type SliderKey = 'study' | 'exercise' | 'relax';
-
-type SliderValues = {
-  study: number;
-  exercise: number;
-  relax: number;
-};
-
-const MIN = 10;
-const MAX = 80;
-const TOTAL = 100;
-
 const PreferencesScreen = () => {
-  const [values, setValues] = useState<SliderValues>({
-    study: 40,
-    exercise: 30,
-    relax: 30,
-  });
-
-  const priorityMap: Record<SliderKey, SliderKey[]> = {
-    study: ['exercise', 'relax'], // 1 takes/gives 2 then 3
-    exercise: ['relax', 'study'], // 2 takes/gives 3 then 1
-    relax: ['study', 'exercise'], // 3 takes/gives 1 then 2
-  };
-
-  const updateSlider = (key: SliderKey, requestedValue: number) => {
-    setValues((prev) => {
-      const next = { ...prev };
-      const current = prev[key];
-
-      // Clamp requested slider itself
-      const target = Math.max(MIN, Math.min(MAX, Math.round(requestedValue)));
-      const delta = target - current;
-
-      const [first, second] = priorityMap[key];
-
-      if (delta > 0) {
-        // Increasing this slider: take from others in priority order
-        let remaining = delta;
-
-        const takeFrom = (otherKey: SliderKey) => {
-          const available = next[otherKey] - MIN;
-          const taken = Math.min(available, remaining);
-          next[otherKey] -= taken;
-          remaining -= taken;
-        };
-
-        takeFrom(first);
-        takeFrom(second);
-
-        // Whatever could actually be taken is what this slider gains
-        next[key] = current + (delta - remaining);
-      } else if (delta < 0) {
-        // Decreasing this slider: give to others in priority order
-        let remaining = -delta;
-        const giveTo = (otherKey: SliderKey) => {
-          const space = MAX - next[otherKey];
-          const given = Math.min(space, remaining);
-          next[otherKey] += given;
-          remaining -= given;
-        };
-
-        giveTo(first);
-        giveTo(second);
-
-        // Whatever could actually be given away is what this slider loses
-        next[key] = current - (-delta - remaining);
-      }
-
-      // Safety: force exact total of 100
-      const sum = next.study + next.exercise + next.relax;
-      if (sum !== TOTAL) {
-        next[key] += TOTAL - sum;
-      }
-
-      return next;
-    });
-  };
+  const [studyPercent, setStudyPercent] = useState(40);
+  const [exerciseDays, setExerciseDays] = useState(3);
+  const [exerciseDuration, setExerciseDuration] = useState(60);
 
   const handleNext = () => {
     const user = auth.currentUser;
     if (user) {
       updateUserPreferences(
-        values.study,
-        values.exercise,
-        values.relax,
+        studyPercent,
+        exerciseDays,
+        exerciseDuration,
         user.uid,
       );
       router.push('/(onboarding)/scheduleInfoScreen');
@@ -110,52 +36,52 @@ const PreferencesScreen = () => {
       }
       middleContent={
         <>
-          {/* Study */}
           <Text style={styles.label}>Study</Text>
+          <Text style={styles.sublabel}>Proportion of free time</Text>
           <View style={styles.sliderRow}>
             <Slider
               style={styles.slider}
-              minimumValue={MIN}
-              maximumValue={MAX}
+              minimumValue={10}
+              maximumValue={80}
               step={5}
-              value={values.study}
+              value={studyPercent}
               minimumTrackTintColor="red"
               maximumTrackTintColor="#ddd"
-              onValueChange={(val) => updateSlider('study', val)}
+              onValueChange={(val) => setStudyPercent(Math.round(val))}
             />
-            <Text style={styles.percent}>{values.study}%</Text>
+            <Text style={styles.percent}>{studyPercent}%</Text>
           </View>
 
-          {/* Exercise */}
-          <Text style={styles.label}>Exercise</Text>
+          <Text style={styles.label}>Exercise Days</Text>
+          <Text style={styles.sublabel}>Days per week</Text>
           <View style={styles.sliderRow}>
             <Slider
               style={styles.slider}
-              minimumValue={MIN}
-              maximumValue={MAX}
-              step={5}
-              value={values.exercise}
-              minimumTrackTintColor="darkred"
+              minimumValue={1}
+              maximumValue={5}
+              step={1}
+              value={exerciseDays}
+              minimumTrackTintColor="red"
               maximumTrackTintColor="#ddd"
-              onValueChange={(val) => updateSlider('exercise', val)}
+              onValueChange={(val) => setExerciseDays(Math.round(val))}
             />
-            <Text style={styles.percent}>{values.exercise}%</Text>
+            <Text style={styles.percent}>{exerciseDays} days</Text>
           </View>
 
-          {/* Relax */}
-          <Text style={styles.label}>Relax</Text>
+          <Text style={styles.label}>Exercise Duration</Text>
+          <Text style={styles.sublabel}>Minutes per day</Text>
           <View style={styles.sliderRow}>
             <Slider
               style={styles.slider}
-              minimumValue={MIN}
-              maximumValue={MAX}
-              step={5}
-              value={values.relax}
-              minimumTrackTintColor="hotpink"
+              minimumValue={30}
+              maximumValue={120}
+              step={10}
+              value={exerciseDuration}
+              minimumTrackTintColor="red"
               maximumTrackTintColor="#ddd"
-              onValueChange={(val) => updateSlider('relax', val)}
+              onValueChange={(val) => setExerciseDuration(Math.round(val))}
             />
-            <Text style={styles.percent}>{values.relax}%</Text>
+            <Text style={styles.percent}>{exerciseDuration} min</Text>
           </View>
         </>
       }
@@ -224,6 +150,14 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: '100%',
     maxWidth: 354,
+  },
+
+  sublabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    width: '100%',
+    maxWidth: 354,
+    marginBottom: 4,
   },
 
   sliderRow: {

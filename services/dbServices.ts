@@ -1,6 +1,5 @@
 import { db } from '@/config/firebase';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { auth } from '../config/firebase';
 
 export interface UserProfile {
   email: string;
@@ -11,9 +10,9 @@ export interface UserProfile {
   wake_up_time?: string;
   sleep_time?: string;
 
-  exercise_preference?: number;
   study_preference?: number;
-  relax_preference?: number;
+  exercise_days?: number;
+  exercise_duration?: number;
 
   class_schedule?: Record<string, string>;
 
@@ -37,29 +36,92 @@ export async function registerBaseUser(email: string, uid: string) {
   }
 }
 
-export async function getEmailNameTimes() {
-  const curUser = auth.currentUser;
-  if (curUser) {
-    const curUserId = curUser.uid;
-    const userDocRef = doc(db, 'users', curUserId);
-    const userDocSnap = await getDoc(userDocRef);
+export async function getNameAndAge(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
 
-    if (userDocSnap.exists()) {
-      const userData = userDocSnap.data();
-      const name = userData.name ? userData.name : '';
-      const age = userData.age ? userData.age : '';
-      const wakeUpTime = userData.wake_up_time ? userData.wake_up_time : '';
-      const sleepTime = userData.sleep_time ? userData.sleep_time : '';
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return {
+      name: userData.name ?? '',
+      age: userData.age ?? '',
+    };
+  }
+}
 
-      const returnData: Map<string, string> = new Map([
-        ['name', name],
-        ['age', age],
-        ['wakeUpTime', wakeUpTime],
-        ['sleepTime', sleepTime],
-      ]);
+export async function getUserData(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
 
-      return returnData;
-    }
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return [
+      userData.name ?? '',
+      userData.age?.toString() ?? '',
+      userData.wake_up_time ?? '',
+      userData.sleep_time ?? '',
+      userData.study_preference ?? '',
+      userData.exercise_days ?? '',
+      userData.exercise_duration ?? '',
+      userData.schedule,
+    ];
+  }
+}
+
+export async function getUserAge(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return userData.name ?? '';
+  }
+}
+
+export async function getWakeUpAndSleepTime(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return {
+      wakeUpTime: userData.wake_up_time ?? '',
+      sleepTime: userData.sleep_time ?? '',
+    };
+  }
+}
+
+export async function getPreferences(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return {
+      study: userData.study_preference,
+      exerciseDays: userData.exercise_days,
+      exerciseDuration: userData.exercise_duration,
+    };
+  }
+}
+
+export async function getSchedule(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return userData.schedule;
+  }
+}
+
+export async function getGeneratedSchedule(userId: string) {
+  const userDocRef = doc(db, 'users', userId);
+  const userDocSnap = await getDoc(userDocRef);
+
+  if (userDocSnap.exists()) {
+    const userData = userDocSnap.data();
+    return userData.generatedSchedule;
   }
 }
 
@@ -86,17 +148,73 @@ export async function updateUserPersonalInfo(
     });
 }
 
+export async function updateUserName(name: string, userId: string) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    name: name,
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('name successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
+export async function updateUserAge(age: string, userId: string) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    age: parseInt(age, 10),
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('age successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
+export async function updateUserWakeUpTime(wakeUpTime: string, userId: string) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    wake_up_time: wakeUpTime,
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('wake-up-time successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
+export async function updateUserSleepTime(sleepTime: string, userId: string) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    sleep_time: sleepTime,
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('sleep-time successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
 export async function updateUserPreferences(
-  exercise: number,
   study: number,
-  relax: number,
+  exerciseDays: number,
+  exerciseDuration: number,
   userId: string,
 ) {
   const docRef = doc(db, 'users', userId);
   const data = {
-    exercise_preference: exercise,
     study_preference: study,
-    relax_preference: relax,
+    exercise_days: exerciseDays,
+    exercise_duration: exerciseDuration,
   };
   await setDoc(docRef, data, { merge: true })
     .then(() => {
@@ -110,11 +228,28 @@ export async function updateUserPreferences(
 export async function updateUserSchedule(userId: string, schedule: string) {
   const docRef = doc(db, 'users', userId);
   const data = {
-    base64schedule: schedule,
+    schedule: schedule,
   };
   await setDoc(docRef, data, { merge: true })
     .then(() => {
       console.log('Schedule successfully written or updated!');
+    })
+    .catch((error) => {
+      console.error('Error writing or updating document: ', error);
+    });
+}
+
+export async function updateUserGeneratedSchedule(
+  userId: string,
+  schedule: string,
+) {
+  const docRef = doc(db, 'users', userId);
+  const data = {
+    generatedSchedule: schedule,
+  };
+  await setDoc(docRef, data, { merge: true })
+    .then(() => {
+      console.log('genrated schedule successfully written or updated!');
     })
     .catch((error) => {
       console.error('Error writing or updating document: ', error);
