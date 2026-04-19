@@ -224,7 +224,7 @@ function placeMeals(
     const daySchedule = parsedSchedule[day];
     const meals = [
       {
-        durationSlots: 5,
+        durationSlots: 6,
         searchStart: wakeMinutes + 30,
         searchEnd: Math.min(wakeMinutes + 120, 11 * 60),
         targetStart: wakeMinutes + 30,

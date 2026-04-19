@@ -13,6 +13,28 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+const activityConfig: Record<string, string> = {
+  exercise: '#FF6B6B',
+  study: '#4D96FF',
+  relax: '#6BCB77',
+  meal: '#FFD93D',
+  class: '#845EC2',
+  free: '#E0E0E0',
+};
+
+function getBlockColor(name: string): string {
+  if (!name || name.trim() === '') return activityConfig.free;
+
+  const key = name.toLowerCase();
+  if (key === 'meal') return activityConfig.meal;
+  if (key === 'exercise') return activityConfig.exercise;
+  if (key === 'study') return activityConfig.study;
+  if (key === 'relax') return activityConfig.relax;
+
+  // Anything else (class names like CIS4301, COP4533, etc.) gets class color
+  return activityConfig.class;
+}
+
 const mainAppPage = () => {
   const [scheduleData, setScheduleData] = useState(schedule);
   const [errorMessage, setErrorMessage] = useState('');
@@ -81,6 +103,13 @@ const mainAppPage = () => {
                 timeToPosition(block.start, start_time)) *
               (PX_PER_HOUR / 60);
 
+            const durationSlots =
+              (timeToPosition(block.end, start_time) -
+                timeToPosition(block.start, start_time)) /
+              5;
+            const isShort = durationSlots < 5; // 5 slots = 25 min
+            const blockColor = getBlockColor(block.name);
+
             return (
               <View
                 key={index}
@@ -88,15 +117,19 @@ const mainAppPage = () => {
                   styles.eventBlock,
                   {
                     top,
-                    height: height,
-                    opacity: height > 50 ? 1 : 0,
+                    height,
+                    backgroundColor: blockColor,
                   },
                 ]}
               >
-                <Text style={styles.eventTitle}>{block.name}</Text>
-                <Text style={styles.eventTime}>
-                  {formatTime(block.start)} - {formatTime(block.end)}
-                </Text>
+                {!isShort && (
+                  <>
+                    <Text style={styles.eventTitle}>{block.name}</Text>
+                    <Text style={styles.eventTime}>
+                      {formatTime(block.start)} - {formatTime(block.end)}
+                    </Text>
+                  </>
+                )}
               </View>
             );
           })}
