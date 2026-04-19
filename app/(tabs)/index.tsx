@@ -26,6 +26,7 @@ const mainAppPage = () => {
         const baseUser = auth.currentUser;
         if (baseUser) {
           const data = await getGeneratedSchedule(baseUser.uid);
+          console.log(data);
           try {
             const jsonData = JSON.parse(data);
             setScheduleData(jsonData);
@@ -90,7 +91,8 @@ const mainAppPage = () => {
                   styles.eventBlock,
                   {
                     top,
-                    height: Math.max(height, 50),
+                    height: height,
+                    opacity: height > 50 ? 1 : 0,
                   },
                 ]}
               >
