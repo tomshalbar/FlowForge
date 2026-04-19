@@ -15,7 +15,6 @@ import Slider from '@react-native-community/slider';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
-
 import {
   Image,
   Pressable,
@@ -26,26 +25,22 @@ import {
 } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
-const MIN = 10;
-const MAX = 80;
-const TOTAL = 100;
-
 const settingPage = () => {
   // same state as onboarding just editable
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [wakeTime, setWakeTime] = useState('');
   const [sleepTime, setSleepTime] = useState('');
-  const [prefValues, setPrefValues] = useState({
-    study: '',
-    exercise: '',
-    relax: '',
-  });
+  const [studyPercent, setStudyPercent] = useState(40);
+  const [exerciseDays, setExerciseDays] = useState(3);
+  const [exerciseDuration, setExerciseDuration] = useState(60);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<string | null>(null);
   const [scheduleJson, setScheduleJson] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
+
   useEffect(() => {
     const fetchData = async () => {
       const baseUser = auth.currentUser;
@@ -63,16 +58,14 @@ const settingPage = () => {
       ];
 
       // Set all states from fetched data
-      setName(data[0]);
-      setAge(data[1]);
-      setWakeTime(data[2]);
-      setSleepTime(data[3]);
-      setPrefValues({
-        study: data[4],
-        exercise: data[5],
-        relax: data[6],
-      });
-      setScheduleJson(data[7]);
+      setName(data[0] as string);
+      setAge(data[1] as string);
+      setWakeTime(data[2] as string);
+      setSleepTime(data[3] as string);
+      setStudyPercent(data[4] ? +data[4] : 40);
+      setExerciseDays(data[5] ? +data[5] : 3);
+      setExerciseDuration(data[6] ? +data[6] : 60);
+      setScheduleJson((data[7] as string) ?? null);
       setIsLoading(false);
     };
 
@@ -96,14 +89,15 @@ const settingPage = () => {
         if (sleepTime) {
           updateUserSleepTime(sleepTime, user.uid);
         }
-        if (prefValues) {
+        if (studyPercent || exerciseDays || exerciseDuration) {
           updateUserPreferences(
-            +prefValues['exercise'],
-            +prefValues['study'],
-            +prefValues['relax'],
+            studyPercent,
+            exerciseDays,
+            exerciseDuration,
             user.uid,
           );
         }
+        let latestSchedule = scheduleJson;
         if (schedule) {
           setErrorMessage('');
           const example_json =
@@ -123,23 +117,22 @@ const settingPage = () => {
             Format if there is there is no valid schedule attached, or if you there is something that is hindering you from performing the task as described: {'monday': {}, 'tuesday': {}, 'wednesday': {}, 'thursday': {}, 'friday': {}}`,
           );
           if (result != null) {
+            latestSchedule = result;
             setScheduleJson(result);
             updateUserSchedule(user.uid, result);
           }
         }
-        const userSched = scheduleJson;
+
         const userPrefs = {
-          exercise: +prefValues['exercise'],
-          study: +prefValues['study'],
-          relax: +prefValues['relax'],
+          study: studyPercent,
+          exerciseDays,
+          exerciseDuration,
         };
-        const userWakeSleepTime = {
-          wakeUpTime: wakeTime,
-          sleepTime: sleepTime,
-        };
-        if (userSched && userPrefs) {
+        const userWakeSleepTime = { wakeUpTime: wakeTime, sleepTime };
+
+        if (latestSchedule) {
           const recommendation = await generateScheduleRecommendation(
-            userSched,
+            latestSchedule,
             userPrefs,
             userWakeSleepTime,
           );
@@ -148,10 +141,15 @@ const settingPage = () => {
       }
     } catch (error) {
       setErrorMessage('Error processing information. Please try later.');
-      setIsLoading(false);
-      setSchedule('');
+      setTimeout(() => setErrorMessage(''), 3000);
+      setSchedule(null);
     } finally {
       setIsLoading(false);
+      setImageUri(null);
+      setSchedule(null);
+      setSuccessMessage('Updated information.');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      console.log('Saved!');
     }
   };
 
@@ -178,50 +176,6 @@ const settingPage = () => {
     '11:00 PM',
     '12:00 AM',
   ];
-
-  // same logic as preferences screen :contentReference[oaicite:0]{index=0}
-  const updateSlider = (key: 'study' | 'exercise' | 'relax', val: number) => {
-    setPrefValues((prev) => {
-      const next = { ...prev };
-      const target = Math.round(val);
-
-      const diff = target - +prev[key];
-
-      if (diff === 0) return prev;
-
-      const others = (Object.keys(prev) as (keyof typeof prev)[]).filter(
-        (k) => k !== key,
-      );
-
-      if (diff > 0) {
-        // take from others
-        let remaining = diff;
-        for (let o of others) {
-          const available = +next[o] - MIN;
-          const take = Math.min(available, remaining);
-          next[o] = +next[o] - take;
-          remaining -= take;
-        }
-        next[key] = target - remaining;
-      } else {
-        // give to others
-        let remaining = -diff;
-        for (let o of others) {
-          const space = MAX - next[o];
-          const give = Math.min(space, remaining);
-          next[o] += give;
-          remaining -= give;
-        }
-        next[key] = target + remaining;
-      }
-
-      // force sum = 100
-      const sum = next.study + next.exercise + next.relax;
-      if (+sum !== TOTAL) next[key] += TOTAL - +sum;
-
-      return next;
-    });
-  };
 
   // schedule upload (same as onboarding but no AI call yet) :contentReference[oaicite:1]{index=1}
   const uploadImage = async () => {
@@ -298,48 +252,51 @@ const settingPage = () => {
           <Text style={styles.sectionTitle}>Preferences</Text>
 
           <Text style={styles.sliderLabel}>Study</Text>
+          <Text style={styles.sublabel}>Proportion of free time</Text>
           <View style={styles.sliderRow}>
             <Slider
               style={styles.slider}
-              minimumValue={MIN}
-              maximumValue={MAX}
+              minimumValue={10}
+              maximumValue={80}
               step={5}
-              value={+prefValues.study}
+              value={studyPercent}
               minimumTrackTintColor="red"
               maximumTrackTintColor="#ddd"
-              onValueChange={(v) => updateSlider('study', v)}
+              onValueChange={(v) => setStudyPercent(Math.round(v))}
             />
-            <Text style={styles.percent}>{prefValues.study}%</Text>
+            <Text style={styles.percent}>{studyPercent}%</Text>
           </View>
 
-          <Text style={styles.sliderLabel}>Exercise</Text>
+          <Text style={styles.sliderLabel}>Exercise Days</Text>
+          <Text style={styles.sublabel}>Days per week</Text>
           <View style={styles.sliderRow}>
             <Slider
               style={styles.slider}
-              minimumValue={MIN}
-              maximumValue={MAX}
-              step={5}
-              value={+prefValues.exercise}
-              minimumTrackTintColor="darkred"
+              minimumValue={1}
+              maximumValue={5}
+              step={1}
+              value={exerciseDays}
+              minimumTrackTintColor="red"
               maximumTrackTintColor="#ddd"
-              onValueChange={(v) => updateSlider('exercise', v)}
+              onValueChange={(v) => setExerciseDays(Math.round(v))}
             />
-            <Text style={styles.percent}>{prefValues.exercise}%</Text>
+            <Text style={styles.percent}>{exerciseDays} days</Text>
           </View>
 
-          <Text style={styles.sliderLabel}>Relax</Text>
+          <Text style={styles.sliderLabel}>Exercise Duration</Text>
+          <Text style={styles.sublabel}>Minutes per day</Text>
           <View style={styles.sliderRow}>
             <Slider
               style={styles.slider}
-              minimumValue={MIN}
-              maximumValue={MAX}
-              step={5}
-              value={+prefValues.relax}
-              minimumTrackTintColor="hotpink"
+              minimumValue={30}
+              maximumValue={120}
+              step={10}
+              value={exerciseDuration}
+              minimumTrackTintColor="red"
               maximumTrackTintColor="#ddd"
-              onValueChange={(v) => updateSlider('relax', v)}
+              onValueChange={(v) => setExerciseDuration(Math.round(v))}
             />
-            <Text style={styles.percent}>{prefValues.relax}%</Text>
+            <Text style={styles.percent}>{exerciseDuration} min</Text>
           </View>
 
           {/* ---------- SCHEDULE ---------- */}
@@ -361,6 +318,24 @@ const settingPage = () => {
               ]}
             />
           </Pressable>
+
+          {(imageUri || schedule) && (
+            <Pressable
+              onPress={() => {
+                setImageUri(null);
+                setSchedule(null);
+              }}
+              style={({ pressed }) => [
+                styles.button,
+                {
+                  transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                  marginTop: 10,
+                },
+              ]}
+            >
+              <Text style={styles.buttonText}>Clear Schedule</Text>
+            </Pressable>
+          )}
         </>
       }
       bottomContent={
@@ -378,9 +353,19 @@ const settingPage = () => {
           >
             <Text style={styles.buttonText}>Save</Text>
           </Pressable>
+          {errorMessage ? (
+            <Text style={{ color: 'red', marginTop: 8, fontSize: 14 }}>
+              {errorMessage}
+            </Text>
+          ) : null}
           {isLoading ? (
             <Text style={{ marginTop: 10, fontSize: 16, color: '#555' }}>
               Updating information.
+            </Text>
+          ) : null}
+          {!isLoading && !errorMessage && successMessage ? (
+            <Text style={{ marginTop: 10, fontSize: 16, color: '#555' }}>
+              {successMessage}
             </Text>
           ) : null}
         </>
@@ -451,6 +436,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
+  sublabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 14,
+    width: '100%',
+    maxWidth: 354,
+    marginBottom: 4,
+  },
+
   sliderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -465,7 +458,7 @@ const styles = StyleSheet.create({
   percent: {
     color: 'white',
     marginLeft: 10,
-    width: 50,
+    width: 70,
     textAlign: 'right',
   },
 
