@@ -16,14 +16,21 @@ type DayAfternoonInfo = {
   largestConsecutiveSlots: number;
 };
 
-type ExerciseAssignment = {
-  [day: string]: number;
-};
-
 type ActivityBudget = {
   exercise: number;
   study: number;
-  relax: number;
+};
+
+type DayExerciseInfo = {
+  day: string;
+  share: number;
+  actuallyPlaced: number;
+  afternoonFrom: number;
+  afternoonTo: number;
+  eveningFrom: number;
+  eveningTo: number;
+  morningFrom: number;
+  morningTo: number;
 };
 
 type DayStudyInfo = {
@@ -280,7 +287,11 @@ function placeMeals(
 function computeBudget(
   parsedSchedule: WeeklySchedule,
   weekdays: string[],
-  preferences: Record<string, number>,
+  preferences: {
+    study: number;
+    exerciseDays: number;
+    exerciseDuration: number;
+  },
 ): ActivityBudget {
   const totalFreeSlots = weekdays.reduce(
     (sum, day) => sum + countFreeSlots(parsedSchedule[day]),
@@ -288,220 +299,12 @@ function computeBudget(
   );
 
   return {
-    exercise: Math.round(totalFreeSlots * (preferences.exercise / 100)),
     study: Math.round(totalFreeSlots * (preferences.study / 100)),
-    relax: Math.round(totalFreeSlots * (preferences.relax / 100)),
+    exercise: preferences.exerciseDays * (preferences.exerciseDuration / 5),
   };
 }
 
-// --- Step 3: Place exercise ---
-
-// Determines how many exercise slots each eligible weekday gets based on the budget,
-// prioritising days with the most consecutive free afternoon time.
-function assignExerciseSlots(
-  parsedSchedule: WeeklySchedule,
-  weekdays: string[],
-  wakeMinutes: number,
-  sleepMinutes: number,
-  budget: ActivityBudget,
-): ExerciseAssignment {
-  const EXERCISE_MIN_SLOTS = 9;
-  const EXERCISE_MAX_SLOTS = 18;
-
-  const totalExerciseSlots = Math.max(budget.exercise, EXERCISE_MIN_SLOTS);
-
-  const afternoonInfos: DayAfternoonInfo[] = weekdays.map((day) => {
-    const mealGroups = findMealGroups(
-      parsedSchedule[day],
-      wakeMinutes,
-      sleepMinutes,
-    );
-    const lunch = mealGroups[1];
-    const dinner = mealGroups[2];
-    if (!lunch || !dinner)
-      return { day, totalFreeSlots: 0, largestConsecutiveSlots: 0 };
-    return {
-      day,
-      ...getAfternoonInfo(parsedSchedule[day], lunch.end, dinner.start),
-    };
-  });
-
-  const eligibleDays = afternoonInfos
-    .filter((d) => d.largestConsecutiveSlots >= EXERCISE_MIN_SLOTS)
-    .sort((a, b) => b.largestConsecutiveSlots - a.largestConsecutiveSlots);
-
-  const exerciseAssignment: ExerciseAssignment = {};
-  let remainingBudget = totalExerciseSlots;
-
-  for (const dayInfo of eligibleDays) {
-    if (remainingBudget <= 0) break;
-    const slotsForDay = Math.min(remainingBudget, EXERCISE_MAX_SLOTS);
-    if (slotsForDay >= EXERCISE_MIN_SLOTS) {
-      exerciseAssignment[dayInfo.day] = slotsForDay;
-      remainingBudget -= slotsForDay;
-    }
-  }
-
-  // Forced minimum: no budget override, placement will decrement budget into negative.
-  if (Object.keys(exerciseAssignment).length === 0) {
-    const bestDay = [...afternoonInfos].sort(
-      (a, b) => b.totalFreeSlots - a.totalFreeSlots,
-    )[0];
-    if (bestDay) exerciseAssignment[bestDay.day] = EXERCISE_MIN_SLOTS;
-  }
-
-  return exerciseAssignment;
-}
-
-// Places an exercise block in the afternoon, preferring the free block closest to 4 PM.
-// Fills from the end of the block if it starts before 4 PM, pushing exercise later.
-function placeExerciseInAfternoon(
-  daySchedule: DailySchedule,
-  fromMinutes: number,
-  toMinutes: number,
-  slotsToPlace: number,
-  budget: ActivityBudget,
-): number {
-  const TARGET_MINUTES = 16 * 60;
-  const WINDOW_START = 16 * 60;
-  const freeBlocks = getFreeBlocks(daySchedule, fromMinutes, toMinutes);
-
-  const eligibleBlocks = freeBlocks.filter(
-    (block) => (block.end - block.start) / 5 >= slotsToPlace,
-  );
-
-  let chosenBlock = eligibleBlocks.reduce(
-    (best: { start: number; end: number; size: number } | null, block) => {
-      const distance = Math.abs(block.start - TARGET_MINUTES);
-      const bestDistance = best
-        ? Math.abs(best.start - TARGET_MINUTES)
-        : Infinity;
-      return distance < bestDistance
-        ? { ...block, size: (block.end - block.start) / 5 }
-        : best;
-    },
-    null,
-  );
-
-  // Fallback: no block large enough → use largest available.
-  if (!chosenBlock) {
-    chosenBlock = freeBlocks.reduce(
-      (best: { start: number; end: number; size: number }, block) => {
-        const size = (block.end - block.start) / 5;
-        return size > best.size ? { ...block, size } : best;
-      },
-      { start: 0, end: 0, size: 0 },
-    );
-  }
-
-  if (!chosenBlock || chosenBlock.size === 0) return slotsToPlace;
-
-  const actualSlots = Math.min(slotsToPlace, chosenBlock.size);
-  const fillFromEnd = chosenBlock.start < WINDOW_START;
-
-  if (fillFromEnd) {
-    const fillStart = chosenBlock.end - actualSlots * 5;
-    for (let i = 0; i < actualSlots; i++) {
-      daySchedule[minutesTo24HourString(fillStart + i * 5)] = 'Exercise';
-    }
-  } else {
-    for (let i = 0; i < actualSlots; i++) {
-      daySchedule[minutesTo24HourString(chosenBlock.start + i * 5)] =
-        'Exercise';
-    }
-  }
-
-  budget.exercise -= actualSlots;
-  return slotsToPlace - actualSlots; // overflow
-}
-
-// Places overflow exercise slots in the evening when the afternoon couldn't fit them all.
-// Prefers the first block large enough to fit the overflow, falls back to largest available.
-function placeExerciseInEvening(
-  daySchedule: DailySchedule,
-  fromMinutes: number,
-  toMinutes: number,
-  slotsToPlace: number,
-  budget: ActivityBudget,
-): void {
-  const freeBlocks = getFreeBlocks(daySchedule, fromMinutes, toMinutes);
-
-  for (const block of freeBlocks) {
-    const size = (block.end - block.start) / 5;
-    if (size >= slotsToPlace) {
-      for (let i = 0; i < slotsToPlace; i++) {
-        daySchedule[minutesTo24HourString(block.start + i * 5)] = 'Exercise';
-      }
-      budget.exercise -= slotsToPlace;
-      return;
-    }
-  }
-
-  const largestBlock = freeBlocks.reduce(
-    (best: { start: number; end: number; size: number }, block) => {
-      const size = (block.end - block.start) / 5;
-      return size > best.size ? { ...block, size } : best;
-    },
-    { start: 0, end: 0, size: 0 },
-  );
-
-  if (largestBlock.size > 0) {
-    const actualSlots = Math.min(slotsToPlace, largestBlock.size);
-    for (let i = 0; i < actualSlots; i++) {
-      daySchedule[minutesTo24HourString(largestBlock.start + i * 5)] =
-        'Exercise';
-    }
-    budget.exercise -= actualSlots;
-  }
-}
-
-// Assigns and places all exercise blocks across the week, with overflow going to the evening.
-function placeExercise(
-  parsedSchedule: WeeklySchedule,
-  weekdays: string[],
-  wakeMinutes: number,
-  sleepMinutes: number,
-  budget: ActivityBudget,
-): void {
-  const exerciseAssignment = assignExerciseSlots(
-    parsedSchedule,
-    weekdays,
-    wakeMinutes,
-    sleepMinutes,
-    budget,
-  );
-
-  for (const day of weekdays) {
-    const daySchedule = parsedSchedule[day];
-    const [, lunch, dinner] = findMealGroups(
-      daySchedule,
-      wakeMinutes,
-      sleepMinutes,
-    );
-    if (!lunch || !dinner) continue;
-
-    if (exerciseAssignment[day]) {
-      const overflow = placeExerciseInAfternoon(
-        daySchedule,
-        lunch.end,
-        dinner.start,
-        exerciseAssignment[day],
-        budget,
-      );
-      if (overflow > 0) {
-        placeExerciseInEvening(
-          daySchedule,
-          dinner.end,
-          sleepMinutes,
-          overflow,
-          budget,
-        );
-      }
-    }
-  }
-}
-
-// --- Step 4: Fill Mandatory Relax Periods ---
+// --- Step 3: Fill Mandatory Relax Periods ---
 
 // Places all forced relax periods at their minimum durations regardless of budget,
 // but still decrements budget.relax to accurately track total relax slots placed.
@@ -510,7 +313,6 @@ function placeAllForcedRelax(
   weekdays: string[],
   wakeMinutes: number,
   sleepMinutes: number,
-  budget: ActivityBudget,
 ): void {
   const POST_BREAKFAST_RELAX_SLOTS = 3; // 15 min
   const POST_LUNCH_RELAX_SLOTS = 6; // 30 min
@@ -527,30 +329,25 @@ function placeAllForcedRelax(
     if (!breakfast || !lunch || !dinner) continue;
 
     // Pre-breakfast — fill entire window
-    const preBreakfastSlots = (breakfast.start - wakeMinutes) / 5;
     fillFreeWith(daySchedule, wakeMinutes, breakfast.start, 'Relax');
-    budget.relax -= preBreakfastSlots;
 
     // Post-breakfast
     for (let i = 0; i < POST_BREAKFAST_RELAX_SLOTS; i++) {
       const slot = minutesTo24HourString(breakfast.end + i * 5);
       if (daySchedule[slot] === '') daySchedule[slot] = 'Relax';
     }
-    budget.relax -= POST_BREAKFAST_RELAX_SLOTS;
 
     // Post-lunch
     for (let i = 0; i < POST_LUNCH_RELAX_SLOTS; i++) {
       const slot = minutesTo24HourString(lunch.end + i * 5);
       if (daySchedule[slot] === '') daySchedule[slot] = 'Relax';
     }
-    budget.relax -= POST_LUNCH_RELAX_SLOTS;
 
     // Post-dinner
     for (let i = 0; i < POST_DINNER_RELAX_SLOTS; i++) {
       const slot = minutesTo24HourString(dinner.end + i * 5);
       if (daySchedule[slot] === '') daySchedule[slot] = 'Relax';
     }
-    budget.relax -= POST_DINNER_RELAX_SLOTS;
 
     // Pre-sleep
     for (let i = 0; i < PRE_SLEEP_RELAX_SLOTS; i++) {
@@ -559,7 +356,279 @@ function placeAllForcedRelax(
       );
       if (daySchedule[slot] === '') daySchedule[slot] = 'Relax';
     }
-    budget.relax -= PRE_SLEEP_RELAX_SLOTS;
+  }
+}
+
+// --- Step 4: Place exercise ---
+
+// Determines how many exercise slots each eligible weekday gets based on the budget,
+// prioritising days with the most consecutive free afternoon time.
+function placeExercise(
+  parsedSchedule: WeeklySchedule,
+  weekdays: string[],
+  wakeMinutes: number,
+  sleepMinutes: number,
+  budget: ActivityBudget,
+  preferences: {
+    study: number;
+    exerciseDays: number;
+    exerciseDuration: number;
+  },
+): void {
+  const EXERCISE_MIN_SLOTS = 6; // 30 min
+  const numDays = Math.min(preferences.exerciseDays, 5);
+  const slotsPerDay = preferences.exerciseDuration / 5;
+
+  // Gather afternoon info for each weekday
+  const afternoonInfos: DayAfternoonInfo[] = weekdays.map((day) => {
+    const mealGroups = findMealGroups(
+      parsedSchedule[day],
+      wakeMinutes,
+      sleepMinutes,
+    );
+    const lunch = mealGroups[1];
+    const dinner = mealGroups[2];
+    if (!lunch || !dinner)
+      return { day, totalFreeSlots: 0, largestConsecutiveSlots: 0 };
+    return {
+      day,
+      ...getAfternoonInfo(parsedSchedule[day], lunch.end, dinner.start),
+    };
+  });
+
+  // Select top numDays eligible days by largest consecutive afternoon free slots
+  const selectedDays = [...afternoonInfos]
+    .filter((d) => d.largestConsecutiveSlots >= EXERCISE_MIN_SLOTS)
+    .sort((a, b) => b.largestConsecutiveSlots - a.largestConsecutiveSlots)
+    .slice(0, numDays);
+
+  // Forced minimum fallback if no eligible days
+  if (selectedDays.length === 0) {
+    const bestDay = [...afternoonInfos].sort(
+      (a, b) => b.totalFreeSlots - a.totalFreeSlots,
+    )[0];
+    if (bestDay) selectedDays.push(bestDay);
+  }
+
+  // Build per-day exercise infos
+  const dayExerciseInfos: DayExerciseInfo[] = selectedDays.map((info) => {
+    const mealGroups = findMealGroups(
+      parsedSchedule[info.day],
+      wakeMinutes,
+      sleepMinutes,
+    );
+    const [breakfast, lunch, dinner] = mealGroups;
+    return {
+      day: info.day,
+      share: slotsPerDay,
+      actuallyPlaced: 0,
+      afternoonFrom: lunch ? lunch.end : wakeMinutes,
+      afternoonTo: dinner ? dinner.start : sleepMinutes,
+      eveningFrom: dinner ? dinner.end : wakeMinutes,
+      eveningTo: sleepMinutes,
+      morningFrom: breakfast ? breakfast.end : wakeMinutes,
+      morningTo: lunch ? lunch.start : sleepMinutes,
+    };
+  });
+
+  const TARGET_MINUTES = 16 * 60;
+  const WINDOW_START = 16 * 60;
+
+  // Helper: place slots into a block, returns number placed
+  const placeInBlock = (
+    daySchedule: DailySchedule,
+    blockStart: number,
+    blockEnd: number,
+    slotsNeeded: number,
+    fromEnd: boolean,
+  ): number => {
+    const blockSize = (blockEnd - blockStart) / 5;
+    const toPlace = Math.min(slotsNeeded, blockSize);
+    const fillStart = fromEnd ? blockEnd - toPlace * 5 : blockStart;
+    for (let i = 0; i < toPlace; i++) {
+      const slot = minutesTo24HourString(fillStart + i * 5);
+      if (daySchedule[slot] === '') daySchedule[slot] = 'Exercise';
+    }
+    return toPlace;
+  };
+
+  // Helper: fill remaining slots across a window, returns updated remaining
+  const fillWindow = (
+    daySchedule: DailySchedule,
+    fromMinutes: number,
+    toMinutes: number,
+    remaining: number,
+    fromEnd: boolean,
+  ): number => {
+    const blocks = getFreeBlocks(daySchedule, fromMinutes, toMinutes).filter(
+      (block) => (block.end - block.start) / 5 >= EXERCISE_MIN_SLOTS,
+    );
+
+    for (const block of blocks) {
+      if (remaining < EXERCISE_MIN_SLOTS) return remaining;
+      const placed = placeInBlock(
+        daySchedule,
+        block.start,
+        block.end,
+        remaining,
+        fromEnd,
+      );
+      budget.exercise -= placed;
+      remaining -= placed;
+    }
+    return remaining;
+  };
+
+  // --- Main placement loop: one day at a time ---
+  for (const info of dayExerciseInfos) {
+    const daySchedule = parsedSchedule[info.day];
+    let remaining = info.share;
+
+    // Afternoon pass 1 — best single block closest to 4 PM
+    const afternoonBlocks = getFreeBlocks(
+      daySchedule,
+      info.afternoonFrom,
+      info.afternoonTo,
+    ).filter((block) => (block.end - block.start) / 5 >= EXERCISE_MIN_SLOTS);
+
+    if (afternoonBlocks.length > 0) {
+      const chosenBlock = afternoonBlocks.reduce(
+        (best: { start: number; end: number } | null, block) => {
+          const distance = Math.abs(block.start - TARGET_MINUTES);
+          const bestDist = best
+            ? Math.abs(best.start - TARGET_MINUTES)
+            : Infinity;
+          return distance < bestDist ? block : best;
+        },
+        null,
+      )!;
+
+      const fromEnd = chosenBlock.start < WINDOW_START;
+      const placed = placeInBlock(
+        daySchedule,
+        chosenBlock.start,
+        chosenBlock.end,
+        remaining,
+        fromEnd,
+      );
+      budget.exercise -= placed;
+      info.actuallyPlaced += placed;
+      remaining -= placed;
+    }
+
+    if (remaining < EXERCISE_MIN_SLOTS) continue;
+
+    // Afternoon pass 2 — remaining afternoon blocks chronologically, forwards
+    remaining = fillWindow(
+      daySchedule,
+      info.afternoonFrom,
+      info.afternoonTo,
+      remaining,
+      false,
+    );
+    if (remaining < EXERCISE_MIN_SLOTS) {
+      info.actuallyPlaced += info.share - remaining;
+      continue;
+    }
+
+    // Evening pass — forwards
+    remaining = fillWindow(
+      daySchedule,
+      info.eveningFrom,
+      info.eveningTo,
+      remaining,
+      false,
+    );
+    if (remaining < EXERCISE_MIN_SLOTS) {
+      info.actuallyPlaced += info.share - remaining;
+      continue;
+    }
+
+    // Morning pass — backwards from lunch
+    remaining = fillWindow(
+      daySchedule,
+      info.morningFrom,
+      info.morningTo,
+      remaining,
+      true,
+    );
+
+    // Discard any remaining below 30 min
+  }
+
+  // --- Extension pass: extend existing exercise blocks into adjacent free slots ---
+  // Collect all free blocks adjacent to exercise across all selected days, smallest first
+  type AdjacentBlock = {
+    day: string;
+    start: number;
+    end: number;
+    size: number;
+  };
+
+  const adjacentBlocks: AdjacentBlock[] = [];
+
+  for (const info of dayExerciseInfos) {
+    const daySchedule = parsedSchedule[info.day];
+    const allWindows = [
+      { from: info.afternoonFrom, to: info.afternoonTo },
+      { from: info.eveningFrom, to: info.eveningTo },
+      { from: info.morningFrom, to: info.morningTo },
+    ];
+
+    for (const window of allWindows) {
+      const freeBlocks = getFreeBlocks(daySchedule, window.from, window.to);
+      for (const block of freeBlocks) {
+        const slotBefore = minutesTo24HourString(block.start - 5);
+        const slotAfter = minutesTo24HourString(block.end);
+        const adjacentToExercise =
+          daySchedule[slotBefore] === 'Exercise' ||
+          daySchedule[slotAfter] === 'Exercise';
+
+        if (adjacentToExercise) {
+          adjacentBlocks.push({
+            day: info.day,
+            start: block.start,
+            end: block.end,
+            size: (block.end - block.start) / 5,
+          });
+        }
+      }
+    }
+  }
+
+  // Sort by size ascending — smallest adjacent blocks first
+  adjacentBlocks.sort((a, b) => a.size - b.size);
+
+  for (const block of adjacentBlocks) {
+    if (budget.exercise <= 0) break;
+    const daySchedule = parsedSchedule[block.day];
+
+    const slotAfter = minutesTo24HourString(block.end);
+    const exerciseIsAfter = daySchedule[slotAfter] === 'Exercise';
+
+    if (exerciseIsAfter) {
+      // Fill backwards from block end so partial fills stay connected to exercise
+      for (
+        let t = block.end - 5;
+        t >= block.start && budget.exercise > 0;
+        t -= 5
+      ) {
+        const slot = minutesTo24HourString(t);
+        if (daySchedule[slot] === '') {
+          daySchedule[slot] = 'Exercise';
+          budget.exercise -= 1;
+        }
+      }
+    } else {
+      // Fill forwards from block start
+      for (let t = block.start; t < block.end && budget.exercise > 0; t += 5) {
+        const slot = minutesTo24HourString(t);
+        if (daySchedule[slot] === '') {
+          daySchedule[slot] = 'Exercise';
+          budget.exercise -= 1;
+        }
+      }
+    }
   }
 }
 
@@ -576,14 +645,6 @@ function fillRemainingSlots(
   budget: ActivityBudget,
 ): void {
   const STUDY_MIN_SLOTS = 6; // 30 min
-
-  // --- Entry condition: exercise + relax budgets exhausted, fill all with study ---
-  if (budget.exercise + budget.relax <= 0) {
-    for (const day of weekdays) {
-      fillFreeWith(parsedSchedule[day], wakeMinutes, sleepMinutes, 'Study');
-    }
-    return;
-  }
 
   // --- 2a: Compute per-day shares ---
   const perDayBase = Math.floor(budget.study / weekdays.length);
@@ -668,7 +729,6 @@ function fillRemainingSlots(
       if (redistributionPool <= 0) break;
       const daySchedule = parsedSchedule[info.day];
 
-      // Find existing study block, afternoon first then morning then evening
       let studyStart: number | null = null;
       let studyEnd: number | null = null;
 
@@ -692,7 +752,7 @@ function fillRemainingSlots(
       if (studyStart === null || studyEnd === null) continue;
 
       // Extend at end first
-      while (redistributionPool > 0) {
+      while (redistributionPool >= STUDY_MIN_SLOTS) {
         const slot = minutesTo24HourString(studyEnd);
         const inAfternoon =
           studyEnd >= info.afternoonFrom && studyEnd < info.afternoonTo;
@@ -709,13 +769,11 @@ function fillRemainingSlots(
           info.actuallyPlaced += 1;
           redistributionPool -= 1;
           studyEnd += 5;
-        } else {
-          break;
-        }
+        } else break;
       }
 
-      // Then extend at start
-      while (redistributionPool > 0) {
+      // Then extend at start — only if enough pool remains
+      while (redistributionPool >= STUDY_MIN_SLOTS) {
         const prevTime = studyStart - 5;
         const slot = minutesTo24HourString(prevTime);
         const inAfternoon =
@@ -733,39 +791,75 @@ function fillRemainingSlots(
           info.actuallyPlaced += 1;
           redistributionPool -= 1;
           studyStart -= 5;
-        } else {
-          break;
+        } else break;
+      }
+    }
+  }
+
+  // --- 2d: Morning study overflow — backwards from lunch ---
+  if (redistributionPool >= STUDY_MIN_SLOTS) {
+    for (const info of dayStudyInfos) {
+      if (redistributionPool < STUDY_MIN_SLOTS) break;
+      const daySchedule = parsedSchedule[info.day];
+
+      // Count contiguous free slots scanning backwards from lunch
+      let contiguous = 0;
+      for (let t = info.morningTo - 5; t >= info.morningFrom; t -= 5) {
+        if (daySchedule[minutesTo24HourString(t)] === '') contiguous++;
+        else break;
+      }
+
+      // Only fill if there are enough contiguous slots
+      if (contiguous < STUDY_MIN_SLOTS) continue;
+
+      for (
+        let t = info.morningTo - 5;
+        t >= info.morningFrom && redistributionPool >= STUDY_MIN_SLOTS;
+        t -= 5
+      ) {
+        const slot = minutesTo24HourString(t);
+        if (daySchedule[slot] === '') {
+          daySchedule[slot] = 'Study';
+          budget.study -= 1;
+          redistributionPool -= 1;
         }
       }
     }
   }
 
-  // --- Step 3: Absorb short gaps adjacent to study blocks, then fill rest with relax ---
+  // --- Step 3: Absorb short gaps adjacent to study first, then exercise ---
   for (const day of weekdays) {
     const daySchedule = parsedSchedule[day];
     const freeBlocks = getFreeBlocks(daySchedule, wakeMinutes, sleepMinutes);
 
     for (const block of freeBlocks) {
       const blockSlots = (block.end - block.start) / 5;
-      if (blockSlots >= STUDY_MIN_SLOTS) continue; // only care about short gaps
+      if (blockSlots >= STUDY_MIN_SLOTS) continue;
 
-      // Check if adjacent to a study block at either end
       const slotBefore = minutesTo24HourString(block.start - 5);
       const slotAfter = minutesTo24HourString(block.end);
+
       const adjacentToStudy =
         daySchedule[slotBefore] === 'Study' ||
         daySchedule[slotAfter] === 'Study';
+      const adjacentToExercise =
+        daySchedule[slotBefore] === 'Exercise' ||
+        daySchedule[slotAfter] === 'Exercise';
 
       if (adjacentToStudy) {
-        // Extend study into this short gap
         for (let t = block.start; t < block.end; t += 5) {
           daySchedule[minutesTo24HourString(t)] = 'Study';
           budget.study -= 1;
         }
+      } else if (adjacentToExercise) {
+        for (let t = block.start; t < block.end; t += 5) {
+          daySchedule[minutesTo24HourString(t)] = 'Exercise';
+          budget.exercise -= 1;
+        }
       }
     }
 
-    // Fill everything remaining with relax
+    // Step 4: Fill all remaining empty slots with relax
     fillFreeWith(daySchedule, wakeMinutes, sleepMinutes, 'Relax');
   }
 }
@@ -776,7 +870,11 @@ function fillRemainingSlots(
 // computes activity budgets, places exercise, then fills the afternoon.
 export async function generateScheduleRecommendation(
   schedule: string,
-  preferences: Record<string, number>,
+  preferences: {
+    study: number;
+    exerciseDays: number;
+    exerciseDuration: number;
+  },
   wakeSleepTime: { wakeUpTime: string; sleepTime: string } | undefined,
 ): Promise<string> {
   const wakeUpTime = wakeSleepTime?.wakeUpTime ?? '';
@@ -793,14 +891,15 @@ export async function generateScheduleRecommendation(
 
   const budget = computeBudget(parsedSchedule, weekdays, preferences);
 
-  placeExercise(parsedSchedule, weekdays, wakeMinutes, sleepMinutes, budget);
+  placeAllForcedRelax(parsedSchedule, weekdays, wakeMinutes, sleepMinutes);
 
-  placeAllForcedRelax(
+  placeExercise(
     parsedSchedule,
     weekdays,
     wakeMinutes,
     sleepMinutes,
     budget,
+    preferences,
   );
 
   fillRemainingSlots(

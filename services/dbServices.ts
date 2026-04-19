@@ -10,9 +10,9 @@ export interface UserProfile {
   wake_up_time?: string;
   sleep_time?: string;
 
-  exercise_preference?: number;
   study_preference?: number;
-  relax_preference?: number;
+  exercise_days?: number;
+  exercise_duration?: number;
 
   class_schedule?: Record<string, string>;
 
@@ -57,12 +57,12 @@ export async function getUserData(userId: string) {
     const userData = userDocSnap.data();
     return [
       userData.name ?? '',
-      userData.age.toString() ?? '',
+      userData.age?.toString() ?? '',
       userData.wake_up_time ?? '',
       userData.sleep_time ?? '',
       userData.study_preference ?? '',
-      userData.exercise_preference ?? '',
-      userData.relax_preference ?? '',
+      userData.exercise_days ?? '',
+      userData.exercise_duration ?? '',
       userData.schedule,
     ];
   }
@@ -98,9 +98,9 @@ export async function getPreferences(userId: string) {
   if (userDocSnap.exists()) {
     const userData = userDocSnap.data();
     return {
-      exercise: userData.exercise_preference,
       study: userData.study_preference,
-      relax: userData.relax_preference,
+      exerciseDays: userData.exercise_days,
+      exerciseDuration: userData.exercise_duration,
     };
   }
 }
@@ -205,16 +205,16 @@ export async function updateUserSleepTime(sleepTime: string, userId: string) {
 }
 
 export async function updateUserPreferences(
-  exercise: number,
   study: number,
-  relax: number,
+  exerciseDays: number,
+  exerciseDuration: number,
   userId: string,
 ) {
   const docRef = doc(db, 'users', userId);
   const data = {
-    exercise_preference: exercise,
     study_preference: study,
-    relax_preference: relax,
+    exercise_days: exerciseDays,
+    exercise_duration: exerciseDuration,
   };
   await setDoc(docRef, data, { merge: true })
     .then(() => {
