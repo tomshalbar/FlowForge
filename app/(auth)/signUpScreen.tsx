@@ -22,14 +22,16 @@ const SignUpScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [confirm_password, setConfirm] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState('');
 
   const handleSignUp = async () => {
     setErrorMessage('');
-
+    setIsLoading(true);
     const validationError = validateSignUp(email, password, confirm_password);
     if (validationError) {
       setErrorMessage(validationError);
+      setIsLoading(false);
       return;
     }
 
@@ -53,6 +55,7 @@ const SignUpScreen = () => {
       }, 5000);
     } catch (error: any) {
       setErrorMessage(error.message);
+      setIsLoading(false);
       console.log('Firebase sign-up error:', error);
     }
   };
@@ -130,10 +133,12 @@ const SignUpScreen = () => {
               // add function to save user input
               handleSignUp();
             }}
+            disabled={isLoading}
             style={({ pressed }) => [
               styles.nextButtonStyle,
               {
                 transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                opacity: isLoading ? 0.5 : 1,
               },
             ]}
           >
