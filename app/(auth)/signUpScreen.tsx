@@ -37,7 +37,7 @@ const SignUpScreen = () => {
 
     try {
       const userCredentials = await signUp(email, password, confirm_password);
-      registerBaseUser(email, userCredentials.user.uid);
+      await registerBaseUser(email, userCredentials.user.uid);
 
       await sendEmailVerification(userCredentials.user);
       console.log(

@@ -14,6 +14,8 @@ import {
 import Slider from '@react-native-community/slider';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
+import { signOut } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
   Image,
@@ -352,6 +354,22 @@ const settingPage = () => {
             ]}
           >
             <Text style={styles.buttonText}>Save</Text>
+          </Pressable>
+          <Pressable
+            onPress={async () => {
+              await signOut(auth);
+              console.log('User Logged Out');
+              router.replace('/(auth)');
+            }}
+            style={({ pressed }) => [
+              styles.button,
+              {
+                transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                marginTop: 10,
+              },
+            ]}
+          >
+            <Text style={styles.buttonText}>Sign Out</Text>
           </Pressable>
           {errorMessage ? (
             <Text style={{ color: 'red', marginTop: 8, fontSize: 14 }}>

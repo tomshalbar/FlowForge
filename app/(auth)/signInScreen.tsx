@@ -36,7 +36,7 @@ const SignInScreen = () => {
         return;
       }
 
-      redirectAfterSignIn(userCredentials);
+      await redirectAfterSignIn(userCredentials);
     } catch (error) {
       setErrorMessage('Incorrect Email or Password');
     }
