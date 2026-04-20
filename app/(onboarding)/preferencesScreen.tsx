@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
-const preferencesScreen = () => {
+const PreferencesScreen = () => {
   const [studyPercent, setStudyPercent] = useState(40);
   const [exerciseDays, setExerciseDays] = useState(3);
   const [exerciseDuration, setExerciseDuration] = useState(60);
@@ -126,7 +126,7 @@ const preferencesScreen = () => {
   );
 };
 
-export default preferencesScreen;
+export default PreferencesScreen;
 
 const styles = StyleSheet.create({
   title: {

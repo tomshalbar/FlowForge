@@ -127,7 +127,6 @@ const SignUpScreen = () => {
 
           <Pressable
             onPress={() => {
-              // function to save user input
               router.push('/signInScreen');
             }}
           >
@@ -150,7 +149,7 @@ const SignUpScreen = () => {
 
           <Pressable
             onPress={() => {
-              router.back();
+              router.navigate('/(auth)');
             }}
           >
             {({ pressed }) => (

@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
-const onboardingDoneScreen = () => {
+const ScheduleInfoScreen = () => {
   const [schedule, setSchedule] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -162,7 +162,7 @@ const onboardingDoneScreen = () => {
   );
 };
 
-export default onboardingDoneScreen;
+export default ScheduleInfoScreen;
 
 const styles = StyleSheet.create({
   title: {

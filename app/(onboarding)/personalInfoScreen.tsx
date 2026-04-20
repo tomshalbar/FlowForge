@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
-const personalInfoScreen = () => {
+const PersonalInfoScreen = () => {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [wakeTime, setWakeTime] = useState('7:00 AM');
@@ -155,7 +155,7 @@ const personalInfoScreen = () => {
   );
 };
 
-export default personalInfoScreen;
+export default PersonalInfoScreen;
 
 const styles = StyleSheet.create({
   container: {

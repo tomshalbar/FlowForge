@@ -3,7 +3,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
 
-const onboardingWelcome = () => {
+const OnboardingWelcome = () => {
   return (
     <AuthScreenLayout
       headerContent={
@@ -45,7 +45,7 @@ const onboardingWelcome = () => {
   );
 };
 
-export default onboardingWelcome;
+export default OnboardingWelcome;
 
 const styles = StyleSheet.create({
   title: {
