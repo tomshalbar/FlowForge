@@ -65,7 +65,6 @@ const ScheduleInfoScreen = () => {
     } catch (error) {
       setErrorMessage('Error processing schedule. Please try later.');
       setIsLoading(false);
-      setSchedule('');
     } finally {
       setIsLoading(false);
     }
@@ -108,6 +107,24 @@ const ScheduleInfoScreen = () => {
               ]}
             />
           </Pressable>
+
+          {(imageUri || schedule) && (
+            <Pressable
+              onPress={() => {
+                setImageUri(null);
+                setSchedule('');
+              }}
+              style={({ pressed }) => [
+                styles.nextButton,
+                {
+                  transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                  marginTop: 100,
+                },
+              ]}
+            >
+              <Text style={styles.buttonText}>Clear Schedule</Text>
+            </Pressable>
+          )}
         </>
       }
       bottomContent={

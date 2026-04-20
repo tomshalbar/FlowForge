@@ -1,7 +1,9 @@
+import { auth } from '@/config/firebase';
 import { signIn } from '@/services/authServices';
 import { redirectAfterSignIn } from '@/services/redirectServices';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { signOut } from 'firebase/auth';
 import React, { useState } from 'react';
 import {
   Pressable,
@@ -22,6 +24,18 @@ const SignInScreen = () => {
   const handleSignIn = async () => {
     try {
       const userCredentials = await signIn(email, password);
+      if (!userCredentials.user.emailVerified) {
+        await signOut(auth);
+        console.log(
+          'Sign in blocked. Email not verified for:',
+          userCredentials.user.email,
+        );
+        setErrorMessage(
+          'Please verify your email before signing in. Check your inbox for the verification link.',
+        );
+        return;
+      }
+
       redirectAfterSignIn(userCredentials);
     } catch (error) {
       setErrorMessage('Incorrect Email or Password');

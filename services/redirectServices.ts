@@ -9,7 +9,6 @@ export async function redirectAfterSignIn(userCredentials: UserCredential) {
 
   if (userDocSnap.exists()) {
     const userData = userDocSnap.data();
-    console.log(userData.completed_onboarding);
     if (userData.completed_onboarding) {
       console.log('succesful sign in. redirecting to main app');
       return router.replace('/(tabs)');

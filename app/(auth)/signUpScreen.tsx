@@ -1,6 +1,8 @@
+import { auth } from '@/config/firebase';
 import { registerBaseUser } from '@/services/dbServices';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { sendEmailVerification, signOut } from 'firebase/auth';
 import React, { useState } from 'react';
 import {
   Pressable,
@@ -20,6 +22,7 @@ const SignUpScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [confirm_password, setConfirm] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [notification, setNotification] = useState('');
 
   const handleSignUp = async () => {
     setErrorMessage('');
@@ -33,10 +36,24 @@ const SignUpScreen = () => {
     try {
       const userCredentials = await signUp(email, password, confirm_password);
       registerBaseUser(email, userCredentials.user.uid);
-      router.replace('/(onboarding)');
+
+      await sendEmailVerification(userCredentials.user);
+      console.log(
+        'Created account for User. Sent verification email to:',
+        userCredentials.user.email,
+      );
+      await signOut(auth);
+
+      setNotification(
+        'Account created! Please check your email to verify your account before signing in.',
+      );
+      setTimeout(() => {
+        setNotification('');
+        router.replace('/signInScreen');
+      }, 5000);
     } catch (error: any) {
       setErrorMessage(error.message);
-      console.log('Firebase sign-in error:', error);
+      console.log('Firebase sign-up error:', error);
     }
   };
   return (
@@ -104,6 +121,9 @@ const SignUpScreen = () => {
 
           {errorMessage ? (
             <Text style={styles.errorText}>{errorMessage}</Text>
+          ) : null}
+          {notification ? (
+            <Text style={styles.notificationText}>{notification}</Text>
           ) : null}
           <Pressable
             onPress={() => {
@@ -230,6 +250,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
     fontSize: 14,
+  },
+  notificationText: {
+    color: 'white',
+    marginTop: 8,
+    marginBottom: 8,
+    fontSize: 18,
+    textAlign: 'center',
   },
   mainButtonText: {
     color: 'white',
