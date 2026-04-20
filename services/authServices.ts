@@ -1,5 +1,8 @@
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
@@ -42,4 +45,17 @@ export async function signUp(
   } catch (error) {
     throw new Error(mapAuthError(error));
   }
+}
+
+export async function reauthenticate(email: string, password: string) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('No user is currently signed in.');
+  const credential = EmailAuthProvider.credential(email, password);
+  await reauthenticateWithCredential(user, credential);
+}
+
+export async function deleteAccount() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('No user is currently signed in.');
+  await deleteUser(user);
 }
