@@ -1,5 +1,11 @@
 import { db } from '@/config/firebase';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+} from 'firebase/firestore';
 
 export interface UserProfile {
   email: string;
@@ -268,4 +274,8 @@ export async function setDoneOnboarding(userId: string) {
     .catch((error) => {
       console.error('Error writing or updating document: ', error);
     });
+}
+
+export async function deleteUserData(userId: string) {
+  await deleteDoc(doc(db, 'users', userId));
 }

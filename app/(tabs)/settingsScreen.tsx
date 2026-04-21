@@ -1,7 +1,9 @@
 import { auth } from '@/config/firebase';
 import { generateScheduleRecommendation } from '@/logic/coreAlgorithm';
 import { analyzeImage } from '@/services/aiServices';
+import { deleteAccount, reauthenticate } from '@/services/authServices';
 import {
+  deleteUserData,
   getUserData,
   updateUserAge,
   updateUserGeneratedSchedule,
@@ -11,6 +13,7 @@ import {
   updateUserSleepTime,
   updateUserWakeUpTime,
 } from '@/services/dbServices';
+import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -19,10 +22,13 @@ import { signOut } from 'firebase/auth';
 import React, { useEffect, useState } from 'react';
 import {
   Image,
+  Keyboard,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import AuthScreenLayout from '../screenTemplate';
@@ -42,6 +48,11 @@ const settingPage = () => {
   const [schedule, setSchedule] = useState<string | null>(null);
   const [scheduleJson, setScheduleJson] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -155,6 +166,20 @@ const settingPage = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      await reauthenticate(deleteEmail, deletePassword);
+      await deleteUserData(user.uid);
+      await deleteAccount();
+      router.replace('/(auth)');
+    } catch (error: any) {
+      console.log('Delete account error:', error.message);
+      setDeleteError('Incorrect email or password. Please try again.');
+    }
+  };
+
   // same times as onboarding
   const times = [
     '5:00 AM',
@@ -195,137 +220,251 @@ const settingPage = () => {
   };
 
   return (
-    <AuthScreenLayout
-      headerContent={
-        <>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Update your preferences anytime</Text>
-        </>
-      }
-      middleContent={
-        <>
-          {/* ---------- PERSONAL INFO ---------- */}
+    <>
+      {showDeleteModal && (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Delete Account</Text>
+              <Text style={styles.modalSubtitle}>
+                Are you sure you want to delete this account? This action is
+                permanent and cannot be undone. Type your email and password to
+                confirm.
+              </Text>
 
-          <TextInput
-            style={styles.inputs}
-            placeholder="Name"
-            placeholderTextColor="rgba(180,180,180,1)"
-            defaultValue={name}
-            onChangeText={setName}
-          />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Email"
+                placeholderTextColor="rgba(180,180,180,1)"
+                keyboardType="email-address"
+                onChangeText={setDeleteEmail}
+              />
 
-          <TextInput
-            style={styles.inputs}
-            placeholder="Age"
-            keyboardType="number-pad"
-            defaultValue={age}
-            placeholderTextColor="rgba(180,180,180,1)"
-            onChangeText={(t) => setAge(t)}
-          />
+              <View style={styles.modalPasswordContainer}>
+                <TextInput
+                  style={styles.modalPasswordInput}
+                  placeholder="Password"
+                  placeholderTextColor="rgba(180,180,180,1)"
+                  secureTextEntry={!showDeletePassword}
+                  onChangeText={setDeletePassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowDeletePassword(!showDeletePassword)}
+                >
+                  <Ionicons
+                    name={showDeletePassword ? 'eye-off' : 'eye'}
+                    size={22}
+                    color="gray"
+                  />
+                </TouchableOpacity>
+              </View>
 
-          <Text style={styles.label}>Wake time</Text>
-          <View style={styles.dropdown}>
-            <Picker
-              selectedValue={wakeTime}
-              onValueChange={setWakeTime}
-              itemStyle={styles.pickerItem}
-            >
-              {times.map((t) => (
-                <Picker.Item key={t} label={t} value={t} />
-              ))}
-            </Picker>
+              {deleteError ? (
+                <Text style={styles.modalError}>{deleteError}</Text>
+              ) : null}
+
+              <Pressable
+                onPress={handleDeleteAccount}
+                style={({ pressed }) => [
+                  styles.button,
+                  {
+                    backgroundColor: 'red',
+                    transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                    marginTop: 10,
+                  },
+                ]}
+              >
+                <Text style={styles.buttonText}>Yes, I'm sure</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setShowDeleteModal(false);
+                  setDeleteError('');
+                  setDeleteEmail('');
+                  setDeletePassword('');
+                }}
+                style={({ pressed }) => [
+                  styles.button,
+                  {
+                    transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                    marginTop: 10,
+                  },
+                ]}
+              >
+                <Text style={styles.buttonText}>No</Text>
+              </Pressable>
+            </View>
           </View>
+        </TouchableWithoutFeedback>
+      )}
+      <AuthScreenLayout
+        headerContent={
+          <>
+            <Text style={styles.title}>Settings</Text>
+            <Text style={styles.subtitle}>Update your preferences anytime</Text>
+          </>
+        }
+        middleContent={
+          <>
+            {/* ---------- PERSONAL INFO ---------- */}
 
-          <Text style={styles.label}>Sleep time</Text>
-          <View style={styles.dropdown}>
-            <Picker
-              selectedValue={sleepTime}
-              onValueChange={setSleepTime}
-              itemStyle={styles.pickerItem}
-            >
-              {times.map((t) => (
-                <Picker.Item key={t} label={t} value={t} />
-              ))}
-            </Picker>
-          </View>
-
-          {/* ---------- PREFERENCES ---------- */}
-
-          <Text style={styles.sectionTitle}>Preferences</Text>
-
-          <Text style={styles.sliderLabel}>Study</Text>
-          <Text style={styles.sublabel}>Proportion of free time</Text>
-          <View style={styles.sliderRow}>
-            <Slider
-              style={styles.slider}
-              minimumValue={10}
-              maximumValue={80}
-              step={5}
-              value={studyPercent}
-              minimumTrackTintColor="red"
-              maximumTrackTintColor="#ddd"
-              onValueChange={(v) => setStudyPercent(Math.round(v))}
+            <TextInput
+              style={styles.inputs}
+              placeholder="Name"
+              placeholderTextColor="rgba(180,180,180,1)"
+              defaultValue={name}
+              onChangeText={setName}
             />
-            <Text style={styles.percent}>{studyPercent}%</Text>
-          </View>
 
-          <Text style={styles.sliderLabel}>Exercise Days</Text>
-          <Text style={styles.sublabel}>Days per week</Text>
-          <View style={styles.sliderRow}>
-            <Slider
-              style={styles.slider}
-              minimumValue={1}
-              maximumValue={5}
-              step={1}
-              value={exerciseDays}
-              minimumTrackTintColor="red"
-              maximumTrackTintColor="#ddd"
-              onValueChange={(v) => setExerciseDays(Math.round(v))}
+            <TextInput
+              style={styles.inputs}
+              placeholder="Age"
+              keyboardType="number-pad"
+              defaultValue={age}
+              placeholderTextColor="rgba(180,180,180,1)"
+              onChangeText={(t) => setAge(t)}
             />
-            <Text style={styles.percent}>{exerciseDays} days</Text>
-          </View>
 
-          <Text style={styles.sliderLabel}>Exercise Duration</Text>
-          <Text style={styles.sublabel}>Minutes per day</Text>
-          <View style={styles.sliderRow}>
-            <Slider
-              style={styles.slider}
-              minimumValue={30}
-              maximumValue={120}
-              step={10}
-              value={exerciseDuration}
-              minimumTrackTintColor="red"
-              maximumTrackTintColor="#ddd"
-              onValueChange={(v) => setExerciseDuration(Math.round(v))}
-            />
-            <Text style={styles.percent}>{exerciseDuration} min</Text>
-          </View>
+            <Text style={styles.label}>Wake time</Text>
+            <View style={styles.dropdown}>
+              <Picker
+                selectedValue={wakeTime}
+                onValueChange={setWakeTime}
+                itemStyle={styles.pickerItem}
+              >
+                {times.map((t) => (
+                  <Picker.Item key={t} label={t} value={t} />
+                ))}
+              </Picker>
+            </View>
 
-          {/* ---------- SCHEDULE ---------- */}
+            <Text style={styles.label}>Sleep time</Text>
+            <View style={styles.dropdown}>
+              <Picker
+                selectedValue={sleepTime}
+                onValueChange={setSleepTime}
+                itemStyle={styles.pickerItem}
+              >
+                {times.map((t) => (
+                  <Picker.Item key={t} label={t} value={t} />
+                ))}
+              </Picker>
+            </View>
 
-          <Text style={styles.sectionTitle}>Schedule</Text>
+            {/* ---------- PREFERENCES ---------- */}
 
-          <Pressable onPress={uploadImage}>
-            <Image
-              source={
-                imageUri
-                  ? { uri: imageUri }
-                  : require('../../assets/images/temp_upload_icon.png')
-              }
-              style={[
-                styles.upload_icon,
+            <Text style={styles.sectionTitle}>Preferences</Text>
+
+            <Text style={styles.sliderLabel}>Study</Text>
+            <Text style={styles.sublabel}>Proportion of free time</Text>
+            <View style={styles.sliderRow}>
+              <Slider
+                style={styles.slider}
+                minimumValue={10}
+                maximumValue={80}
+                step={5}
+                value={studyPercent}
+                minimumTrackTintColor="red"
+                maximumTrackTintColor="#ddd"
+                onValueChange={(v) => setStudyPercent(Math.round(v))}
+              />
+              <Text style={styles.percent}>{studyPercent}%</Text>
+            </View>
+
+            <Text style={styles.sliderLabel}>Exercise Days</Text>
+            <Text style={styles.sublabel}>Days per week</Text>
+            <View style={styles.sliderRow}>
+              <Slider
+                style={styles.slider}
+                minimumValue={1}
+                maximumValue={5}
+                step={1}
+                value={exerciseDays}
+                minimumTrackTintColor="red"
+                maximumTrackTintColor="#ddd"
+                onValueChange={(v) => setExerciseDays(Math.round(v))}
+              />
+              <Text style={styles.percent}>{exerciseDays} days</Text>
+            </View>
+
+            <Text style={styles.sliderLabel}>Exercise Duration</Text>
+            <Text style={styles.sublabel}>Minutes per day</Text>
+            <View style={styles.sliderRow}>
+              <Slider
+                style={styles.slider}
+                minimumValue={30}
+                maximumValue={120}
+                step={10}
+                value={exerciseDuration}
+                minimumTrackTintColor="red"
+                maximumTrackTintColor="#ddd"
+                onValueChange={(v) => setExerciseDuration(Math.round(v))}
+              />
+              <Text style={styles.percent}>{exerciseDuration} min</Text>
+            </View>
+
+            {/* ---------- SCHEDULE ---------- */}
+
+            <Text style={styles.sectionTitle}>Schedule</Text>
+
+            <Pressable onPress={uploadImage}>
+              <Image
+                source={
+                  imageUri
+                    ? { uri: imageUri }
+                    : require('../../assets/images/temp_upload_icon.png')
+                }
+                style={[
+                  styles.upload_icon,
+                  {
+                    borderColor: schedule
+                      ? 'rgb(37,37,37)'
+                      : 'rgb(184,184,184)',
+                  },
+                ]}
+              />
+            </Pressable>
+
+            {(imageUri || schedule) && (
+              <Pressable
+                onPress={() => {
+                  setImageUri(null);
+                  setSchedule(null);
+                }}
+                style={({ pressed }) => [
+                  styles.button,
+                  {
+                    transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                    marginTop: 10,
+                  },
+                ]}
+              >
+                <Text style={styles.buttonText}>Clear Schedule</Text>
+              </Pressable>
+            )}
+          </>
+        }
+        bottomContent={
+          <>
+            <Pressable
+              onPress={handleSave}
+              disabled={isLoading}
+              style={({ pressed }) => [
+                styles.button,
                 {
-                  borderColor: schedule ? 'rgb(37,37,37)' : 'rgb(184,184,184)',
+                  transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                  opacity: isLoading ? 0.5 : 1,
                 },
               ]}
-            />
-          </Pressable>
-
-          {(imageUri || schedule) && (
+            >
+              <Text style={styles.buttonText}>Save</Text>
+            </Pressable>
             <Pressable
-              onPress={() => {
-                setImageUri(null);
-                setSchedule(null);
+              onPress={async () => {
+                await signOut(auth);
+                console.log('User Logged Out');
+                router.replace('/(auth)');
               }}
               style={({ pressed }) => [
                 styles.button,
@@ -335,60 +474,40 @@ const settingPage = () => {
                 },
               ]}
             >
-              <Text style={styles.buttonText}>Clear Schedule</Text>
+              <Text style={styles.buttonText}>Sign Out</Text>
             </Pressable>
-          )}
-        </>
-      }
-      bottomContent={
-        <>
-          <Pressable
-            onPress={handleSave}
-            disabled={isLoading}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
-                opacity: isLoading ? 0.5 : 1,
-              },
-            ]}
-          >
-            <Text style={styles.buttonText}>Save</Text>
-          </Pressable>
-          <Pressable
-            onPress={async () => {
-              await signOut(auth);
-              console.log('User Logged Out');
-              router.replace('/(auth)');
-            }}
-            style={({ pressed }) => [
-              styles.button,
-              {
-                transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
-                marginTop: 10,
-              },
-            ]}
-          >
-            <Text style={styles.buttonText}>Sign Out</Text>
-          </Pressable>
-          {errorMessage ? (
-            <Text style={{ color: 'red', marginTop: 8, fontSize: 14 }}>
-              {errorMessage}
-            </Text>
-          ) : null}
-          {isLoading ? (
-            <Text style={{ marginTop: 10, fontSize: 16, color: '#555' }}>
-              Updating information.
-            </Text>
-          ) : null}
-          {!isLoading && !errorMessage && successMessage ? (
-            <Text style={{ marginTop: 10, fontSize: 16, color: '#555' }}>
-              {successMessage}
-            </Text>
-          ) : null}
-        </>
-      }
-    />
+            <Pressable
+              onPress={() => setShowDeleteModal(true)}
+              style={({ pressed }) => [
+                styles.button,
+                {
+                  transform: pressed ? [{ scale: 0.95 }] : [{ scale: 1 }],
+                  marginTop: 20,
+                  backgroundColor: 'red',
+                },
+              ]}
+            >
+              <Text style={styles.buttonText}>Delete Account</Text>
+            </Pressable>
+            {errorMessage ? (
+              <Text style={{ color: 'red', marginTop: 8, fontSize: 14 }}>
+                {errorMessage}
+              </Text>
+            ) : null}
+            {isLoading ? (
+              <Text style={{ marginTop: 10, fontSize: 16, color: '#555' }}>
+                Updating information.
+              </Text>
+            ) : null}
+            {!isLoading && !errorMessage && successMessage ? (
+              <Text style={{ marginTop: 10, fontSize: 16, color: '#555' }}>
+                {successMessage}
+              </Text>
+            ) : null}
+          </>
+        }
+      />
+    </>
   );
 };
 
@@ -502,5 +621,66 @@ const styles = StyleSheet.create({
     fontSize: 22,
     textAlign: 'center',
     fontWeight: '700',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  modalBox: {
+    width: '85%',
+    backgroundColor: 'rgba(163,51,58,1)',
+    borderRadius: 15,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  modalInput: {
+    height: 52,
+    width: '100%',
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 15,
+    color: 'black',
+    marginBottom: 15,
+  },
+  modalError: {
+    color: 'red',
+    fontSize: 14,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalPasswordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 52,
+    width: '100%',
+    backgroundColor: 'white',
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    marginBottom: 12,
+  },
+  modalPasswordInput: {
+    flex: 1,
+    color: 'black',
+    paddingVertical: 0,
   },
 });
